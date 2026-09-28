@@ -301,15 +301,23 @@ export type GenerateResult = { id: string; ok: boolean; message: string };
 export async function generateLabels(ids: string[]): Promise<GenerateResult[]> {
   const response = await meRequest("POST", "/api/v2/me/shipment/generate", { orders: ids }, { timeoutMessage: NO_ANSWER });
   if (!isOk(response.status)) throw mapApiError(response.status, response.body);
-  const body = (response.body ?? {}) as Record<string, { status?: unknown; message?: unknown } | undefined>;
+  // Asking again for orders already in the queue: the API answers 204 with no body.
+  if (response.status === 204 || response.body === null) {
+    return ids.map((id) => ({ id, ok: true, message: "Envio já encaminhado para geração." }));
+  }
+  const body = response.body as Record<string, { status?: unknown; message?: unknown } | undefined>;
   return ids.map((id) => {
     const entry = body[id];
     if (!entry || typeof entry !== "object") {
       return { id, ok: false, message: "A transportadora não respondeu por este envio." };
     }
-    return { id, ok: entry.status === true, message: typeof entry.message === "string" ? entry.message : "" };
+    const message = typeof entry.message === "string" ? entry.message : "";
+    // "O envio já está sendo processado…" comes with status false but means "wait", not "failed".
+    return { id, ok: entry.status === true || ALREADY_QUEUED.test(message), message };
   });
 }
+
+const ALREADY_QUEUED = /sendo processado|já (foi|está) gerad|already (being )?(processed|generated)/i;
 
 export type LabelStatus = { id: string; status: string; generated: boolean; tracking: string | null };
 

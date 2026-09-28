@@ -106,6 +106,8 @@ Suba o servidor com o sandbox do Melhor Envio. Ele tem R$ 10.000,00 de saldo fic
 MELHOR_ENVIO_ENV=sandbox npm run dev
 ```
 
+No sandbox, a geração de etiqueta aceita o pedido ("Envio encaminhado para geração"), mas nunca conclui. Em 28/09/2026, nenhum pedido do sandbox foi gerado em mais de 3 horas, com remetente CNPJ ou CPF. O app mostra uma faixa roxa de "Ambiente de testes" enquanto roda no sandbox. Imprimir etiqueta só é possível em produção.
+
 O script `node scripts/spike-sandbox.mjs` percorre o fluxo inteiro da API no sandbox e regrava as respostas usadas como fixtures nos testes.
 
 ## Como funciona

@@ -412,6 +412,23 @@ describe("labels", () => {
     expect((await generateLabels([A, B]))[1]).toEqual({ id: B, ok: false, message: "A transportadora não respondeu por este envio." });
   });
 
+  test("asking again while the label is being processed is not a failure (real API answer)", async () => {
+    const processing = fixture<Record<string, { message: string }>>("generate-processing");
+    const [id] = Object.keys(processing);
+    fakeMelhorEnvio([{ method: "POST", path: /\/shipment\/generate$/, reply: () => jsonResponse(200, processing) }]);
+    expect(await generateLabels([id])).toEqual([
+      { id, ok: true, message: "O envio já está sendo processado. Aguarde, seu envio será gerado em instantes." },
+    ]);
+  });
+
+  test("a repeated request answered with 204 and no body means the orders are already queued", async () => {
+    fakeMelhorEnvio([{ method: "POST", path: /\/shipment\/generate$/, reply: () => jsonResponse(204, null) }]);
+    expect(await generateLabels([A, B])).toEqual([
+      { id: A, ok: true, message: "Envio já encaminhado para geração." },
+      { id: B, ok: true, message: "Envio já encaminhado para geração." },
+    ]);
+  });
+
   test("status tells generated labels apart and exposes the tracking code", async () => {
     fakeMelhorEnvio([
       {

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "orders": [
+      "a2db7535-15b1-4697-bd41-d57439f9b24d"
+    ]
+  },
+  "status": 200,
+  "body": {
+    "a2db7535-15b1-4697-bd41-d57439f9b24d": {
+      "message": "O envio já está sendo processado. Aguarde, seu envio será gerado em instantes.",
+      "status": false
+    }
+  }
+}

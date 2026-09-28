@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { SandboxBanner } from "@/components/SandboxBanner";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className={`${geistSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
+        <SandboxBanner />
         <OfflineBanner />
         {children}
         <ServiceWorkerRegister />
