@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Copy, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { callApi } from "@/lib/apiClient";
 import { formatCurrency } from "@/lib/format";
 import type { PendingPix } from "@/lib/storage";
@@ -22,18 +22,31 @@ export function PixPanel({ pix, onPaid, onFailed }: Props) {
   const [copied, setCopied] = useState(false);
   const expiresAt = pix.expiresAt ? new Date(pix.expiresAt) : null;
 
+  // Latest callbacks, so re-renders of the parent never restart the polling.
+  const handlers = useRef({ onPaid, onFailed });
+  useEffect(() => {
+    handlers.current = { onPaid, onFailed };
+  });
+
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
+    const expiresAtMs = pix.expiresAt ? new Date(pix.expiresAt).getTime() : Number.NaN;
+    // Reports at most once, then stops for good.
+    const finish = (outcome: "paid" | "failed") => {
+      active = false;
+      if (outcome === "paid") handlers.current.onPaid();
+      else handlers.current.onFailed();
+    };
     const check = async () => {
+      if (Number.isFinite(expiresAtMs) && Date.now() > expiresAtMs) return finish("failed");
       if (document.visibilityState === "visible") {
         try {
           const { status } = await callApi<{ status: "pending" | "paid" | "failed" }>(
             `/api/shipments/wallet/pix?id=${encodeURIComponent(pix.paymentId)}`,
           );
           if (!active) return;
-          if (status === "paid") return onPaid();
-          if (status === "failed") return onFailed();
+          if (status === "paid" || status === "failed") return finish(status);
         } catch {
           // A failed check is retried on the next tick.
         }
@@ -45,7 +58,7 @@ export function PixPanel({ pix, onPaid, onFailed }: Props) {
       active = false;
       clearTimeout(timer);
     };
-  }, [pix.paymentId, onPaid, onFailed]);
+  }, [pix.paymentId, pix.expiresAt]);
 
   async function copy() {
     try {

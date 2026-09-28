@@ -33,6 +33,7 @@ import {
 import type { QuoteOption, QuoteResult } from "@/lib/types";
 import { AppHeader } from "./AppHeader";
 import { ContractDialog } from "./contract/ContractDialog";
+import { PendingPaymentBanner } from "./payment/PendingPaymentBanner";
 import { DestinationInput } from "./DestinationInput";
 import { HistoryList } from "./HistoryList";
 import { OriginSelector } from "./OriginSelector";
@@ -241,6 +242,7 @@ export function Cotador() {
         >
           <header className="space-y-4">
             <AppHeader current="cotar" />
+            <PendingPaymentBanner />
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
                 Cotador de Fretes
