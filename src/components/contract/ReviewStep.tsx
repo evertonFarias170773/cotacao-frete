@@ -21,6 +21,14 @@ export function ReviewStep({ option, quote, draft, cart, onBack, onNext }: Props
   const volumes = quote.volumes.reduce((total, volume) => total + volume.quantity, 0);
   const change = priceChangeMessage(option.price, cart.total);
   const { recipient, content } = draft;
+  // Invoice checks from the XML (value) and from the server (issuer), shown before paying.
+  const warnings = [...(draft.nfe?.warnings ?? []), ...(cart.warnings ?? [])];
+  const contentLabel =
+    content.kind === "declaration"
+      ? `Declaração: ${content.description}`
+      : draft.source === "xml" && draft.nfe
+        ? `NF-e nº ${draft.nfe.number}`
+        : "Nota fiscal (NF-e)";
 
   const row = (label: string, value: React.ReactNode) => (
     <div className="flex justify-between gap-4 py-2 text-sm">
@@ -37,6 +45,15 @@ export function ReviewStep({ option, quote, draft, cart, onBack, onNext }: Props
           <span>{change} Confira antes de pagar.</span>
         </p>
       )}
+      {warnings.map((warning) => (
+        <p
+          key={warning}
+          className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>{warning}</span>
+        </p>
+      ))}
       <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
         {row("Serviço", `${option.company} · ${option.service}`)}
         {row("Prazo", formatDeliveryRange(option.deliveryMin, option.deliveryMax))}
@@ -52,7 +69,7 @@ export function ReviewStep({ option, quote, draft, cart, onBack, onNext }: Props
             </span>
           </span>,
         )}
-        {row("Conteúdo", content.kind === "declaration" ? `Declaração: ${content.description}` : "Nota fiscal (NF-e)")}
+        {row("Conteúdo", contentLabel)}
         {draft.agencyName && row("Agência", draft.agencyName)}
         {row("Preço confirmado", <span className="text-lg font-bold">{formatCurrency(cart.total)}</span>)}
       </dl>

@@ -7,23 +7,20 @@ import type { QuoteRequest } from "@/lib/schemas";
 import type { QuoteOption } from "@/lib/types";
 import { LabelPanel } from "../payment/LabelPanel";
 import { PaymentPanel } from "../payment/PaymentPanel";
-import { ContentStep } from "./ContentStep";
+import type { RecipientInput } from "@/lib/recipient";
+import type { AgencyChoice } from "./AgencyPicker";
+import { DocumentStep, type DocumentResult } from "./DocumentStep";
 import { RecipientStep } from "./RecipientStep";
 import { ReviewStep } from "./ReviewStep";
 import { StepShell } from "./StepShell";
-import {
-  DEFAULT_DESCRIPTION,
-  EMPTY_RECIPIENT,
-  type CartResult,
-  type ContentDraft,
-  type ContractDraft,
-} from "./types";
+import { EMPTY_RECIPIENT, type CartResult, type ContractDraft } from "./types";
 
-type Step = "recipient" | "content" | "review" | "payment" | "label";
+type Step = "document" | "recipient" | "review" | "payment" | "label";
 
+// The document comes first: an NF-e XML fills the recipient, so the user only checks it.
 const STEPS: { id: Step; label: string }[] = [
+  { id: "document", label: "Documento" },
   { id: "recipient", label: "Destinatário" },
-  { id: "content", label: "Conteúdo" },
   { id: "review", label: "Revisão" },
   { id: "payment", label: "Pagamento" },
   { id: "label", label: "Etiqueta" },
@@ -32,11 +29,14 @@ const STEPS: { id: Step; label: string }[] = [
 type Props = { option: QuoteOption; quote: QuoteRequest; onClose: () => void };
 
 export function ContractDialog({ option, quote, onClose }: Props) {
-  const [step, setStep] = useState<Step>("recipient");
+  const [step, setStep] = useState<Step>("document");
   const [draft, setDraft] = useState<ContractDraft>({
+    source: "xml",
     recipient: EMPTY_RECIPIENT,
-    content: { kind: "declaration", description: DEFAULT_DESCRIPTION },
+    content: { kind: "invoice", key: "" },
   });
+  // Changes whenever a new XML fills the recipient, so the form starts over with its data.
+  const [recipientVersion, setRecipientVersion] = useState(0);
   const [cart, setCart] = useState<CartResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,15 +78,27 @@ export function ContractDialog({ option, quote, onClose }: Props) {
     };
   }, [busy]);
 
-  async function putInCart(content: ContentDraft, agency?: { id: number; name: string }) {
-    const next: ContractDraft = { ...draft, content, agencyId: agency?.id, agencyName: agency?.name };
+  function documentChosen(result: DocumentResult) {
+    setDraft((current) => ({
+      ...current,
+      source: result.source,
+      content: result.content,
+      nfe: result.source === "xml" ? (result.nfe ?? current.nfe) : undefined,
+      recipient: result.recipient ?? current.recipient,
+    }));
+    if (result.recipient) setRecipientVersion((version) => version + 1);
+    setStep("recipient");
+  }
+
+  async function putInCart(recipient: RecipientInput, agency: AgencyChoice) {
+    const next: ContractDraft = { ...draft, recipient, agencyId: agency?.id, agencyName: agency?.name };
     setDraft(next);
     setBusy(true);
     setError(null);
     try {
       const result = await callApi<CartResult>("/api/shipments/cart", {
         method: "POST",
-        body: { quote, serviceId: option.id, recipient: next.recipient, content, agencyId: agency?.id },
+        body: { quote, serviceId: option.id, recipient, content: next.content, agencyId: agency?.id },
       });
       setCart(result);
       setStep("review");
@@ -134,31 +146,31 @@ export function ContractDialog({ option, quote, onClose }: Props) {
           </button>
         </header>
 
-        {step === "recipient" && (
-          <RecipientStep
+        {step === "document" && (
+          <DocumentStep
             destinationCep={quote.destinationCep}
-            initial={draft.recipient}
-            onBack={close}
-            onNext={(recipient) => {
-              setDraft((d) => ({ ...d, recipient }));
-              setStep("content");
-            }}
+            declaredValue={declaredValue}
+            initial={{ source: draft.source, content: draft.content, nfe: draft.nfe }}
+            onCancel={close}
+            onNext={documentChosen}
           />
         )}
-        {step === "content" && (
-          <ContentStep
+        {step === "recipient" && (
+          <RecipientStep
+            key={recipientVersion}
+            destinationCep={quote.destinationCep}
             origin={quote.originId}
             companyId={option.companyId}
-            declaredValue={declaredValue}
-            initialContent={draft.content}
+            initial={draft.recipient}
             initialAgencyId={draft.agencyId}
+            prefilledFrom={draft.source === "xml" ? draft.nfe?.number : undefined}
             busy={busy}
             error={error}
             onBack={() => {
               setError(null);
-              setStep("recipient");
+              setStep("document");
             }}
-            onNext={(content, agency) => void putInCart(content, agency)}
+            onNext={(recipient, agency) => void putInCart(recipient, agency)}
           />
         )}
         {step === "review" && cart && (
@@ -169,7 +181,7 @@ export function ContractDialog({ option, quote, onClose }: Props) {
             cart={cart}
             onBack={() => {
               discardCart();
-              setStep("content");
+              setStep("recipient");
             }}
             onNext={() => setStep("payment")}
           />

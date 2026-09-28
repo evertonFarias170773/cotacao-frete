@@ -85,9 +85,12 @@ de identificador no histórico, para uma cotação repetida subir de posição e
 
 Em cada resultado da cotação, **Contratar este frete** abre uma tela em etapas:
 
-1. **Destinatário.** Nome, CPF ou CNPJ (inclusive o CNPJ alfanumérico), telefone e endereço. O endereço vem do CEP cotado pelo ViaCEP, e o CEP não muda sem nova cotação.
-2. **Conteúdo.** Declaração de conteúdo ou chave da NF-e modelo 55. Transportadoras que deixam o pacote numa agência (Jadlog, LATAM, Azul, Buslog, Total Express) mostram a agência padrão de cada origem, definida em `src/config/agencies.ts`, com opção de trocar.
-3. **Revisão.** O envio entra no carrinho do Melhor Envio e a tela mostra o preço confirmado por ele, com aviso se mudou em relação à cotação. Voltar ou fechar remove o item do carrinho.
+1. **Documento.** Três opções:
+   - **Nota fiscal (XML):** o arquivo é lido no próprio aparelho, sem ir a nenhum servidor, e preenche o destinatário e a chave. Se o CEP da nota for diferente do cotado, a tela bloqueia e pede nova cotação. Se o valor da nota for diferente do declarado, ou se faltar o protocolo da SEFAZ, a tela avisa.
+   - **Só a chave da NF-e:** chave modelo 55, com o destinatário digitado.
+   - **Declaração de conteúdo:** sem nota fiscal.
+2. **Destinatário.** Nome, CPF ou CNPJ (inclusive o CNPJ alfanumérico), telefone e endereço, já preenchidos quando veio o XML. O endereço que faltar vem do CEP cotado pelo ViaCEP, e o CEP não muda sem nova cotação. Transportadoras que deixam o pacote numa agência (Jadlog, LATAM, Azul, Buslog, Total Express) mostram a agência padrão de cada origem, definida em `src/config/agencies.ts`, com opção de trocar.
+3. **Revisão.** O envio entra no carrinho do Melhor Envio e a tela mostra o preço confirmado por ele, com aviso se mudou em relação à cotação. Com NF-e, o servidor também avisa quando a nota foi emitida por um CNPJ diferente do remetente. Voltar ou fechar remove o item do carrinho.
 4. **Pagamento.** Com saldo suficiente na carteira, o pagamento é imediato. Sem saldo, o app gera um PIX só da diferença, espera a confirmação e conclui a compra sozinho. O valor do PIX é sempre calculado no servidor.
 5. **Etiqueta.** O app pede a geração, acompanha até ficar pronta e oferece **Imprimir etiqueta**. O PDF é baixado pelo servidor e entregue só a quem está logado, sem link público. Correios, Loggi e J&T geram uma etiqueta por volume.
 

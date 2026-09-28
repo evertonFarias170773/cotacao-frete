@@ -1,21 +1,32 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { FileCheck2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import type { OriginId } from "@/config/origins";
 import { formatCep } from "@/lib/format";
 import { recipientSchema, type Recipient, type RecipientInput } from "@/lib/recipient";
 import { lookupCep } from "@/lib/viacep";
+import { AgencyPicker, needsAgency, type AgencyChoice } from "./AgencyPicker";
 import { Field, StepShell } from "./StepShell";
 
 type Props = {
   destinationCep: string;
+  origin: OriginId;
+  companyId?: number;
   initial: RecipientInput;
+  initialAgencyId?: number;
+  /** Invoice number when the fields came from an NF-e XML. */
+  prefilledFrom?: string;
+  busy: boolean;
+  error: string | null;
   onBack: () => void;
-  onNext: (recipient: RecipientInput) => void;
+  onNext: (recipient: RecipientInput, agency: AgencyChoice) => void;
 };
 
-export function RecipientStep({ destinationCep, initial, onBack, onNext }: Props) {
+export function RecipientStep(props: Props) {
+  const { destinationCep, origin, companyId, initial, prefilledFrom, busy, error, onBack, onNext } = props;
   const {
     register,
     handleSubmit,
@@ -24,7 +35,13 @@ export function RecipientStep({ destinationCep, initial, onBack, onNext }: Props
     formState: { errors },
   } = useForm<RecipientInput, unknown, Recipient>({ resolver: zodResolver(recipientSchema), defaultValues: initial });
 
-  // Fill the address from the quoted CEP, without overwriting anything the user already typed.
+  const withAgency = needsAgency(companyId);
+  const [agency, setAgency] = useState<AgencyChoice>(
+    props.initialAgencyId ? { id: props.initialAgencyId, name: "" } : undefined,
+  );
+  const [agencyReady, setAgencyReady] = useState(!withAgency);
+
+  // Fill the address from the quoted CEP, without overwriting anything already there (typed or from the XML).
   useEffect(() => {
     const controller = new AbortController();
     lookupCep(destinationCep, controller.signal)
@@ -44,12 +61,23 @@ export function RecipientStep({ destinationCep, initial, onBack, onNext }: Props
     return () => controller.abort();
   }, [destinationCep, getValues, setValue]);
 
-  const submit = handleSubmit(() => onNext(getValues()));
+  const submit = handleSubmit(() => onNext(getValues(), agency));
 
   return (
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
-      <StepShell back={{ label: "Cancelar", onClick: onBack }} next={{ label: "Continuar", type: "submit" }}>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Quem recebe o envio.</p>
+      <StepShell
+        error={error}
+        back={{ label: "Voltar", onClick: onBack, disabled: busy }}
+        next={{ label: "Revisar envio", type: "submit", busy, disabled: !agencyReady }}
+      >
+        {prefilledFrom ? (
+          <p className="flex items-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-fg">
+            <FileCheck2 className="h-4 w-4 shrink-0" aria-hidden />
+            Dados preenchidos pela NF-e nº {prefilledFrom}. Confira e complete o que faltar.
+          </p>
+        ) : (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Quem recebe o envio.</p>
+        )}
         <Field id="r-name" label="Nome completo ou razão social" autoComplete="name" error={errors.name?.message} {...register("name")} />
         <div className="grid grid-cols-2 gap-3">
           <Field id="r-document" label="CPF ou CNPJ" autoComplete="off" error={errors.document?.message} {...register("document")} />
@@ -90,6 +118,15 @@ export function RecipientStep({ destinationCep, initial, onBack, onNext }: Props
           <Field id="r-city" label="Cidade" error={errors.city?.message} {...register("city")} />
           <Field id="r-state" label="UF" maxLength={2} error={errors.stateAbbr?.message} {...register("stateAbbr")} />
         </div>
+        {withAgency && (
+          <AgencyPicker
+            origin={origin}
+            companyId={companyId}
+            selectedId={agency?.id}
+            onChange={setAgency}
+            onReadyChange={setAgencyReady}
+          />
+        )}
       </StepShell>
     </form>
   );
