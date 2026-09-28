@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { formatCurrency, formatDeliveryRange, formatKg } from "@/lib/format";
 import type { QuoteOption } from "@/lib/types";
@@ -9,9 +9,10 @@ type Props = {
   option: QuoteOption;
   badge?: "cheapest" | "fastest";
   highlight?: boolean;
+  onContract?: () => void;
 };
 
-export function ResultItem({ option, badge, highlight }: Props) {
+export function ResultItem({ option, badge, highlight, onContract }: Props) {
   const [open, setOpen] = useState(false);
   const detailsId = `result-${option.id}-details`;
   const originalPrice = option.originalPrice;
@@ -83,6 +84,16 @@ export function ResultItem({ option, badge, highlight }: Props) {
                 ))}
               </ul>
             </div>
+          )}
+          {onContract && (
+            <button
+              type="button"
+              onClick={onContract}
+              className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition hover:brightness-110"
+            >
+              <ShoppingCart className="h-4 w-4" aria-hidden />
+              Contratar este frete
+            </button>
           )}
         </div>
       )}

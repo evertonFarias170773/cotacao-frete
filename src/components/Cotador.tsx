@@ -16,6 +16,7 @@ import type { PlannedVolume } from "@/lib/presets";
 import { requestQuote } from "@/lib/quoteClient";
 import {
   quoteFormSchema,
+  type QuoteRequest,
   type QuoteFormInput,
   type QuoteFormOutput,
   type VolumeFormInput,
@@ -29,8 +30,9 @@ import {
   saveLastOrigin,
   type HistoryEntry,
 } from "@/lib/storage";
-import type { QuoteResult } from "@/lib/types";
+import type { QuoteOption, QuoteResult } from "@/lib/types";
 import { AppHeader } from "./AppHeader";
+import { ContractDialog } from "./contract/ContractDialog";
 import { DestinationInput } from "./DestinationInput";
 import { HistoryList } from "./HistoryList";
 import { OriginSelector } from "./OriginSelector";
@@ -92,7 +94,10 @@ export function Cotador() {
   const [quote, setQuote] = useState<{
     signature: string;
     result: QuoteResult;
+    request: QuoteRequest;
   } | null>(null);
+  // The option being contracted; only ever one of the options of the quote on screen.
+  const [contracting, setContracting] = useState<QuoteOption | null>(null);
   const [failure, setFailure] = useState<{
     signature: string;
     message: string;
@@ -130,7 +135,7 @@ export function Cotador() {
       try {
         const fresh = await requestQuote(data);
         setFailure(null);
-        setQuote({ signature: quoted, result: fresh });
+        setQuote({ signature: quoted, result: fresh, request: data });
         const best = fresh.available[0];
         if (best) setHistory(pushHistory(createHistoryEntry(data, best)));
       } catch (err) {
@@ -359,9 +364,17 @@ export function Cotador() {
             result={result}
             error={error}
             onRetry={() => startQuote()}
+            onContract={status === "success" ? setContracting : undefined}
           />
         </aside>
       </main>
+      {contracting && quote && result && (
+        <ContractDialog
+          option={contracting}
+          quote={quote.request}
+          onClose={() => setContracting(null)}
+        />
+      )}
     </FormProvider>
   );
 }

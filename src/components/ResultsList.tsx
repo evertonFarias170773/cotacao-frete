@@ -2,7 +2,7 @@
 
 import { AlertTriangle, PackageSearch, RotateCw } from "lucide-react";
 import { pickBadges } from "@/lib/normalize";
-import type { QuoteResult } from "@/lib/types";
+import type { QuoteOption, QuoteResult } from "@/lib/types";
 import { ResultItem } from "./ResultItem";
 
 export type QuoteStatus = "idle" | "loading" | "success" | "error";
@@ -12,9 +12,11 @@ type Props = {
   result: QuoteResult | null;
   error: string | null;
   onRetry: () => void;
+  /** Present only while the list matches the form, so an outdated option can never be contracted. */
+  onContract?: (option: QuoteOption) => void;
 };
 
-export function ResultsList({ status, result, error, onRetry }: Props) {
+export function ResultsList({ status, result, error, onRetry, onContract }: Props) {
   if (status === "idle") {
     return (
       <div className="card flex flex-col items-center gap-2 p-8 text-center text-zinc-500 dark:text-zinc-400">
@@ -75,6 +77,7 @@ export function ResultsList({ status, result, error, onRetry }: Props) {
           {result.available.map((option) => (
             <ResultItem
               key={option.id}
+              onContract={onContract ? () => onContract(option) : undefined}
               option={option}
               badge={option.id === cheapestId ? "cheapest" : option.id === fastestId ? "fastest" : undefined}
               highlight={option.id === cheapestId}
