@@ -1,0 +1,181 @@
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { fakeMelhorEnvio, fixture, jsonResponse } from "@/test/meFetch";
+import { TEST_SENDERS, TEST_SENDERS_JSON } from "@/test/senders";
+import type { ContractRequest } from "./recipient";
+import { SAME_DOCUMENT_MESSAGE } from "./recipient";
+import { APP_TAG, addToCart, listAgencies, removeFromCart } from "./shipments";
+
+const cartPac = fixture<{ id: string; price: number }>("cart-pac");
+
+const contract: ContractRequest = {
+  quote: {
+    originId: "poa",
+    destinationCep: "01018020",
+    volumes: [{ height: 21.6, width: 22, length: 32, weight: 9.45, insurance: 1215, quantity: 2 }],
+    options: { receipt: false, own_hand: false },
+  },
+  serviceId: 1,
+  recipient: {
+    name: "Cliente Ficticio",
+    document: "529.982.247-25",
+    phone: "11912345678",
+    email: "",
+    address: "Rua Anita Garibaldi",
+    number: "25",
+    complement: "",
+    district: "Sé",
+    city: "São Paulo",
+    stateAbbr: "SP",
+  },
+  content: { kind: "declaration", description: "Pulseira Tri Band" },
+};
+
+beforeEach(() => {
+  vi.stubEnv("MELHOR_ENVIO_TOKEN", "token");
+  vi.stubEnv("MELHOR_ENVIO_ENV", "production");
+  vi.stubEnv("SENDERS_JSON", TEST_SENDERS_JSON);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
+describe("addToCart", () => {
+  test("Correios with two volumes creates two cart items and sums their prices", async () => {
+    const { calls } = fakeMelhorEnvio([
+      {
+        method: "POST",
+        path: /^\/api\/v2\/me\/cart$/,
+        reply: (_body, n) => jsonResponse(201, { ...cartPac, id: `order-${n}`, protocol: `ORD-${n}` }),
+      },
+    ]);
+
+    const result = await addToCart(contract);
+
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(2);
+    expect(result.orders).toEqual([
+      { id: "order-1", protocol: "ORD-1", price: 68.83 },
+      { id: "order-2", protocol: "ORD-2", price: 68.83 },
+    ]);
+    expect(result.total).toBe(137.66);
+  });
+
+  test("the sender always comes from the server configuration of the origin", async () => {
+    const { calls } = fakeMelhorEnvio([
+      { method: "POST", path: /\/cart$/, reply: () => jsonResponse(201, cartPac) },
+    ]);
+    await addToCart({ ...contract, quote: { ...contract.quote, volumes: [{ ...contract.quote.volumes[0], quantity: 1 }] } });
+    const sent = calls[0].body as { from: { postal_code: string; company_document: string }; options: { tags: { tag: string }[] } };
+    expect(sent.from.postal_code).toBe(TEST_SENDERS.poa.postalCode);
+    expect(sent.from.company_document).toBe(TEST_SENDERS.poa.companyDocument);
+    expect(sent.options.tags[0].tag).toBe(APP_TAG);
+  });
+
+  test("when the second item fails, the first is removed and the API reason is reported", async () => {
+    const { calls } = fakeMelhorEnvio([
+      {
+        method: "POST",
+        path: /\/cart$/,
+        reply: (_body, n) =>
+          n === 1
+            ? jsonResponse(201, { ...cartPac, id: "order-1" })
+            : jsonResponse(422, { message: "E-CRT-0001: Valor alto.", suggestion: "Troque o tipo de envio." }),
+      },
+      { method: "DELETE", path: /\/cart\/order-1$/, reply: () => jsonResponse(204, null) },
+    ]);
+
+    await expect(addToCart(contract)).rejects.toMatchObject({ status: 422, message: "Valor alto. Troque o tipo de envio." });
+    expect(calls.some((c) => c.method === "DELETE" && c.path.endsWith("/cart/order-1"))).toBe(true);
+  });
+
+  test("a network failure midway also removes what was already created", async () => {
+    let n = 0;
+    const deleted: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        if (init.method === "DELETE") {
+          deleted.push(url);
+          return jsonResponse(204, null);
+        }
+        n += 1;
+        if (n === 1) return jsonResponse(201, { ...cartPac, id: "order-1" });
+        throw new TypeError("fetch failed");
+      }),
+    );
+    await expect(addToCart(contract)).rejects.toMatchObject({ status: 504 });
+    expect(deleted.some((url) => url.endsWith("/cart/order-1"))).toBe(true);
+  });
+
+  test("Total Express between units with the same CNPJ is refused before calling the API", async () => {
+    const { calls } = fakeMelhorEnvio([]);
+    const toOwnUnit: ContractRequest = {
+      ...contract,
+      serviceId: 35,
+      recipient: { ...contract.recipient, document: TEST_SENDERS.scs.companyDocument },
+    };
+    await expect(addToCart(toOwnUnit)).rejects.toMatchObject({ status: 422, message: SAME_DOCUMENT_MESSAGE });
+    expect(calls).toHaveLength(0);
+  });
+
+  test("missing sender configuration is a server error with a clear message", async () => {
+    vi.stubEnv("SENDERS_JSON", "");
+    fakeMelhorEnvio([]);
+    await expect(addToCart(contract)).rejects.toMatchObject({
+      status: 500,
+      message: "Dados do remetente não configurados no servidor (SENDERS_JSON).",
+    });
+  });
+
+  test("an unexpected cart answer is reported, and the item is not left behind", async () => {
+    const { calls } = fakeMelhorEnvio([
+      { method: "POST", path: /\/cart$/, reply: () => jsonResponse(201, { nada: true }) },
+    ]);
+    await expect(
+      addToCart({ ...contract, quote: { ...contract.quote, volumes: [{ ...contract.quote.volumes[0], quantity: 1 }] } }),
+    ).rejects.toMatchObject({ status: 502 });
+    expect(calls.filter((c) => c.method === "DELETE")).toHaveLength(0);
+  });
+});
+
+describe("removeFromCart", () => {
+  test("deletes every id and ignores ones that are already gone", async () => {
+    const { calls } = fakeMelhorEnvio([
+      { method: "DELETE", path: /\/cart\/a$/, reply: () => jsonResponse(204, null) },
+      { method: "DELETE", path: /\/cart\/b$/, reply: () => jsonResponse(404, { message: "not found" }) },
+    ]);
+    await expect(removeFromCart(["a", "b"])).resolves.toBeUndefined();
+    expect(calls.map((c) => c.path)).toEqual(["/api/v2/me/cart/a", "/api/v2/me/cart/b"]);
+  });
+});
+
+describe("listAgencies", () => {
+  const agency = (id: number, name: string, city: string) => ({
+    id,
+    name,
+    address: { address: `Rua ${name}`, number: "1", city: { city } },
+  });
+
+  test("lists the origin city's agencies with the team's usual one first, even from another city", async () => {
+    const { calls } = fakeMelhorEnvio([
+      {
+        method: "GET",
+        path: /\/shipment\/agencies/,
+        reply: () =>
+          jsonResponse(200, [
+            agency(1, "Zeta", "Porto Alegre"),
+            agency(5677, "QNS02", "Canoas"),
+            agency(2, "Alfa", "Porto Alegre"),
+            agency(3, "Longe", "Torres"),
+          ]),
+      },
+    ]);
+
+    const list = await listAgencies(9, "poa");
+
+    expect(calls[0].path).toBe("/api/v2/me/shipment/agencies?company=9&state=RS");
+    expect(list.map((a) => a.id)).toEqual([5677, 2, 1]);
+    expect(list[0]).toEqual({ id: 5677, name: "QNS02", address: "Rua QNS02, 1 - Canoas", preferred: true });
+  });
+});
