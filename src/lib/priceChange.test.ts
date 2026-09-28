@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { priceChangeMessage } from "./priceChange";
 
-const nbsp = (s: string | null) => s?.replace(/ /g, " ") ?? null;
+const nbsp = (s: string | null) => s?.replace(/\u00a0/g, " ") ?? null;
 
 describe("priceChangeMessage", () => {
   test("says nothing when the cart confirms the quoted price", () => {

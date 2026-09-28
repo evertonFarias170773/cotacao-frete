@@ -135,10 +135,13 @@ const orderSchema = z.looseObject({
   id: z.string(),
   status: z.string().nullish(),
   paid_at: z.string().nullish(),
+  price: z.coerce.number().nullish(),
   tracking: z.string().nullish(),
   self_tracking: z.string().nullish(),
   generated_at: z.string().nullish(),
 });
+
+const toCents = (value: number) => Math.round(value * 100);
 
 async function getOrder(id: string) {
   const response = await meRequest("GET", `/api/v2/me/orders/${encodeURIComponent(id)}`, undefined, {
@@ -150,25 +153,34 @@ async function getOrder(id: string) {
   return parsed.data;
 }
 
-export type PayResult = { status: "paid"; protocol?: string } | { status: "insufficient"; pix: number };
+export type PayResult =
+  | { status: "paid"; protocol?: string }
+  | { status: "insufficient"; pix: number }
+  | { status: "price_changed"; total: number };
 
 const ALREADY_PAID = /already been paid|já (foi|foram) pag/i;
 
 /**
- * Pays the orders with the wallet balance. Safe to repeat: orders already paid are not charged again
- * (the API answers a repeated checkout with 204, or with the documented 422 "already been paid").
+ * Pays the orders with the wallet balance, only if their total is still the one the user saw.
+ * Safe to repeat: orders already paid are not charged again (the API answers a repeated
+ * checkout with 204, or with the documented 422 "already been paid").
  */
-export async function payOrders(ids: string[]): Promise<PayResult> {
+export async function payOrders(ids: string[], expectedTotal: number): Promise<PayResult> {
   const prices = await cartPrices(ids);
   const outOfCart = ids.filter((id) => !prices.has(id));
+  let paidTotal = 0;
   for (const id of outOfCart) {
     const order = await getOrder(id);
     if (!order.paid_at) throw new QuoteError(409, NOT_WAITING);
+    paidTotal += order.price ?? 0;
   }
   const pending = ids.filter((id) => prices.has(id));
   if (pending.length === 0) return { status: "paid" };
 
   const total = round2(pending.reduce((sum, id) => sum + (prices.get(id) ?? 0), 0));
+  const everything = round2(total + paidTotal);
+  if (toCents(everything) !== toCents(expectedTotal)) return { status: "price_changed", total: everything };
+
   const missing = pixTopUpFor(total, await walletBalance());
   if (missing > 0) return { status: "insufficient", pix: missing };
 
@@ -210,8 +222,13 @@ const pixResponseSchema = z.looseObject({
  * Returns { amount: 0 } when the balance already covers them. Only what the screen needs
  * is returned: the gateway response also carries the account holder's name and CPF.
  */
-export async function createPixForOrders(ids: string[]): Promise<PixCharge | { amount: 0 }> {
+export async function createPixForOrders(
+  ids: string[],
+  expectedTotal: number,
+): Promise<PixCharge | { amount: 0 } | { priceChanged: number }> {
   const total = await cartTotal(ids);
+  // The PIX is anchored to the price the user reviewed.
+  if (toCents(total) !== toCents(expectedTotal)) return { priceChanged: total };
   const amount = pixTopUpFor(total, await walletBalance());
   if (amount === 0) return { amount: 0 };
 

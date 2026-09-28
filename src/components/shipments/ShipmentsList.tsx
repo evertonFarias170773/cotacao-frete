@@ -114,6 +114,7 @@ export function ShipmentsList() {
                 orders={pending.orders}
                 total={pending.total}
                 label={pending.label}
+                onDiscard={() => setPending(null)}
                 onPaid={() => {
                   setPendingPaid(true);
                   reload();

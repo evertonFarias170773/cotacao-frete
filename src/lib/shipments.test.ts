@@ -213,7 +213,7 @@ describe("wallet and PIX", () => {
 
   test("with an empty wallet, the PIX covers the orders' cart prices", async () => {
     const { calls } = fakeMelhorEnvio(walletRoutes(0));
-    const charge = await createPixForOrders([orderA, orderB]);
+    const charge = await createPixForOrders([orderA, orderB], 137.66);
 
     const topUp = calls.find((c) => c.method === "POST");
     expect(topUp?.body).toEqual({ gateway: "yapay-transparente", slug: "pix", value: "137.66" });
@@ -228,19 +228,25 @@ describe("wallet and PIX", () => {
 
   test("the PIX only covers what the balance is missing", async () => {
     const { calls } = fakeMelhorEnvio(walletRoutes(20.1));
-    await createPixForOrders([orderA, orderB]);
+    await createPixForOrders([orderA, orderB], 137.66);
     expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ value: "117.56" });
   });
 
   test("no PIX is created when the balance already covers the orders", async () => {
     const { calls } = fakeMelhorEnvio(walletRoutes(500));
-    expect(await createPixForOrders([orderA])).toEqual({ amount: 0 });
+    expect(await createPixForOrders([orderA], 68.83)).toEqual({ amount: 0 });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  test("no PIX is created for a price the user did not see", async () => {
+    const { calls } = fakeMelhorEnvio(walletRoutes(0));
+    expect(await createPixForOrders([orderA, orderB], 100)).toEqual({ priceChanged: 137.66 });
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
   test("refuses to charge for orders that are no longer waiting in the cart", async () => {
     const { calls } = fakeMelhorEnvio(walletRoutes(0));
-    await expect(createPixForOrders([orderA, "00000000-0000-4000-8000-000000000000"])).rejects.toMatchObject({
+    await expect(createPixForOrders([orderA, "00000000-0000-4000-8000-000000000000"], 68.83)).rejects.toMatchObject({
       status: 409,
       message: "Este envio não está mais aguardando pagamento. Confira na tela Envios.",
     });
@@ -262,7 +268,7 @@ describe("wallet and PIX", () => {
       },
       { method: "POST", path: /\/balance$/, reply: () => jsonResponse(200, pixCreated) },
     ]);
-    await createPixForOrders([orderA, orderB]);
+    await createPixForOrders([orderA, orderB], 137.66);
     expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ value: "137.66" });
   });
 
@@ -297,31 +303,37 @@ describe("payOrders", () => {
 
   test("with enough balance, pays every order in one checkout", async () => {
     const { calls } = fakeMelhorEnvio(routes({ balance: 500 }));
-    expect(await payOrders([orderA, orderB])).toEqual({ status: "paid", protocol: "PUR-202609144989" });
+    expect(await payOrders([orderA, orderB], 137.66)).toEqual({ status: "paid", protocol: "PUR-202609144989" });
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({ orders: [orderA, orderB] });
   });
 
   test("without enough balance, says how much PIX is missing and does not call checkout", async () => {
     const { calls } = fakeMelhorEnvio(routes({ balance: 100 }));
-    expect(await payOrders([orderA, orderB])).toEqual({ status: "insufficient", pix: 37.66 });
+    expect(await payOrders([orderA, orderB], 137.66)).toEqual({ status: "insufficient", pix: 37.66 });
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
   test("a repeated payment the API answers with 204 counts as paid", async () => {
     fakeMelhorEnvio(routes({ balance: 500, checkoutReply: () => jsonResponse(204, null) }));
-    expect(await payOrders([orderA, orderB])).toEqual({ status: "paid" });
+    expect(await payOrders([orderA, orderB], 137.66)).toEqual({ status: "paid" });
   });
 
   test("the documented 'already paid' 422 also counts as paid", async () => {
     fakeMelhorEnvio(
       routes({ balance: 500, checkoutReply: () => jsonResponse(422, { message: "One or more orders have already been paid." }) }),
     );
-    expect(await payOrders([orderA, orderB])).toEqual({ status: "paid" });
+    expect(await payOrders([orderA, orderB], 137.66)).toEqual({ status: "paid" });
+  });
+
+  test("a cart price different from the one the user saw is not paid", async () => {
+    const { calls } = fakeMelhorEnvio(routes({ balance: 500 }));
+    expect(await payOrders([orderA, orderB], 120)).toEqual({ status: "price_changed", total: 137.66 });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
   test("orders already paid and gone from the cart are not charged again", async () => {
     const { calls } = fakeMelhorEnvio(routes({ balance: 0, inCart: [] }));
-    expect(await payOrders([paidOrder.id])).toEqual({ status: "paid" });
+    expect(await payOrders([paidOrder.id], 68.83)).toEqual({ status: "paid" });
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
@@ -330,7 +342,7 @@ describe("payOrders", () => {
       { method: "GET", path: /\/cart\?page=1$/, reply: () => jsonResponse(204, null) },
       { method: "GET", path: /\/orders\/[\w-]+$/, reply: () => jsonResponse(200, paidOrder) },
     ]);
-    expect(await payOrders([paidOrder.id])).toEqual({ status: "paid" });
+    expect(await payOrders([paidOrder.id], 68.83)).toEqual({ status: "paid" });
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
@@ -340,12 +352,12 @@ describe("payOrders", () => {
       { method: "GET", path: /\/cart\?page=1$/, reply: () => jsonResponse(200, { data: [], last_page: 1 }) },
       { method: "GET", path: /\/orders\/[\w-]+$/, reply: () => jsonResponse(200, { id: orderA, status: "canceled", paid_at: null }) },
     ]);
-    await expect(payOrders([orderA])).rejects.toMatchObject({ status: 409 });
+    await expect(payOrders([orderA], 68.83)).rejects.toMatchObject({ status: 409 });
   });
 
   test("other checkout refusals carry the API's reason", async () => {
     fakeMelhorEnvio(routes({ balance: 500, checkoutReply: () => jsonResponse(422, { error: "Serviço indisponível." }) }));
-    await expect(payOrders([orderA, orderB])).rejects.toMatchObject({ status: 422, message: "Serviço indisponível." });
+    await expect(payOrders([orderA, orderB], 137.66)).rejects.toMatchObject({ status: 422, message: "Serviço indisponível." });
   });
 });
 

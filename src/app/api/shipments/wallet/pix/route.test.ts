@@ -24,7 +24,7 @@ describe("POST /api/shipments/wallet/pix", () => {
       { method: "GET", path: /\/cart\?page=1$/, reply: () => jsonResponse(200, { ...cartList, last_page: 1 }) },
       { method: "POST", path: /\/balance$/, reply: () => jsonResponse(200, fixture("pix-create")) },
     ]);
-    const response = await POST(await authedRequest(URL, jsonBody({ orders, value: 0.01 })));
+    const response = await POST(await authedRequest(URL, jsonBody({ orders, expectedTotal: 137.66, value: 0.01 })));
 
     expect(response.status).toBe(200);
     expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ value: "137.66" });
@@ -34,7 +34,7 @@ describe("POST /api/shipments/wallet/pix", () => {
 
   test("requires a session", async () => {
     const { calls } = fakeMelhorEnvio([]);
-    expect((await POST(new Request(URL, jsonBody({ orders })))).status).toBe(401);
+    expect((await POST(new Request(URL, jsonBody({ orders, expectedTotal: 137.66 })))).status).toBe(401);
     expect(calls).toHaveLength(0);
   });
 });
