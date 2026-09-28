@@ -87,7 +87,7 @@ describe("quoteShipment", () => {
   test("maps 401 to the authentication message", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthenticated." }));
     await expect(quoteShipment(request)).rejects.toMatchObject({
-      status: 401,
+      status: 502,
       message: "Não foi possível autenticar no Melhor Envio. Verifique o token.",
     });
   });

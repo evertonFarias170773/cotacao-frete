@@ -1,3 +1,5 @@
+import { UNAUTHENTICATED_MESSAGE } from "./sessionConfig";
+
 /** Error from one of the app's API routes; carries the HTTP status and the JSON body. */
 export class ApiError extends Error {
   readonly status: number;
@@ -27,13 +29,13 @@ export async function callApi<T>(path: string, init: { method?: string; body?: u
     throw new Error("Sem conexão com o servidor. Verifique a internet e tente novamente.");
   }
 
-  if (response.status === 401) {
+  const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  // Only our own session check sends the user to the login page; any other failure stays on screen.
+  if (response.status === 401 && body?.error === UNAUTHENTICATED_MESSAGE) {
     // Plain module, no router here; a full navigation also lets the proxy re-check the cookie.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign(`/entrar?para=${encodeURIComponent(window.location.pathname)}`);
   }
-
-  const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
   if (!response.ok) {
     const message = typeof body?.error === "string" ? body.error : "Não foi possível concluir. Tente novamente.";
     throw new ApiError(message, response.status, body);

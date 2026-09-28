@@ -5,7 +5,8 @@ describe("mapApiError", () => {
   test("401 -> authentication message", () => {
     const err = mapApiError(401, { message: "Unauthenticated." });
     expect(err).toBeInstanceOf(QuoteError);
-    expect(err.status).toBe(401);
+    // Upstream auth failure is a server problem (502), never "your session expired" (401).
+    expect(err.status).toBe(502);
     expect(err.message).toBe("Não foi possível autenticar no Melhor Envio. Verifique o token.");
   });
 

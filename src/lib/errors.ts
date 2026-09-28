@@ -14,7 +14,8 @@ export class QuoteError extends Error {
  */
 export function mapApiError(status: number, body: unknown): QuoteError {
   if (status === 401) {
-    return new QuoteError(401, "Não foi possível autenticar no Melhor Envio. Verifique o token.");
+    // A server-side problem: answering 401 would make the browser think the session expired.
+    return new QuoteError(502, "Não foi possível autenticar no Melhor Envio. Verifique o token.");
   }
   if (status === 403) {
     return new QuoteError(403, "O token do Melhor Envio não tem permissão para esta operação.");
