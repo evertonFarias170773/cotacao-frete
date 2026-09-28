@@ -5,9 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { callApi } from "@/lib/apiClient";
 import type { QuoteRequest } from "@/lib/schemas";
 import type { QuoteOption } from "@/lib/types";
+import { PaymentPanel } from "../payment/PaymentPanel";
 import { ContentStep } from "./ContentStep";
 import { RecipientStep } from "./RecipientStep";
 import { ReviewStep } from "./ReviewStep";
+import { StepShell } from "./StepShell";
 import {
   DEFAULT_DESCRIPTION,
   EMPTY_RECIPIENT,
@@ -16,13 +18,14 @@ import {
   type ContractDraft,
 } from "./types";
 
-type Step = "recipient" | "content" | "review" | "payment";
+type Step = "recipient" | "content" | "review" | "payment" | "label";
 
 const STEPS: { id: Step; label: string }[] = [
   { id: "recipient", label: "Destinatário" },
   { id: "content", label: "Conteúdo" },
   { id: "review", label: "Revisão" },
   { id: "payment", label: "Pagamento" },
+  { id: "label", label: "Etiqueta" },
 ];
 
 type Props = { option: QuoteOption; quote: QuoteRequest; onClose: () => void };
@@ -36,12 +39,15 @@ export function ContractDialog({ option, quote, onClose }: Props) {
   const [cart, setCart] = useState<CartResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Once paid, or once a PIX exists for them, the orders must stay: the money is on its way.
+  const [paid, setPaid] = useState(false);
+  const [pixCreated, setPixCreated] = useState(false);
 
   const declaredValue = quote.volumes.reduce((total, volume) => total + volume.insurance * volume.quantity, 0);
 
   /** Items left unpaid in the Melhor Envio cart are removed when the user backs out. */
   function discardCart() {
-    if (!cart) return;
+    if (!cart || paid || pixCreated) return;
     const orders = cart.orders.map((order) => order.id);
     setCart(null);
     void callApi("/api/shipments/cart", { method: "DELETE", body: { orders } }).catch(() => undefined);
@@ -167,8 +173,27 @@ export function ContractDialog({ option, quote, onClose }: Props) {
             onNext={() => setStep("payment")}
           />
         )}
-        {step === "payment" && (
-          <p className="px-5 py-8 text-center text-sm text-zinc-500">O pagamento entra na próxima etapa da implementação.</p>
+        {step === "payment" && cart && (
+          <StepShell back={pixCreated ? undefined : { label: "Voltar", onClick: () => setStep("review") }}>
+            <PaymentPanel
+              orders={cart.orders.map((order) => order.id)}
+              total={cart.total}
+              label={`${option.company} · ${option.service} para ${draft.recipient.name}`}
+              onPixCreated={() => setPixCreated(true)}
+              onPaid={() => {
+                setPaid(true);
+                setStep("label");
+              }}
+            />
+            {pixCreated && (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Pode fechar esta tela: o envio fica guardado e a compra pode ser concluída depois na tela Envios.
+              </p>
+            )}
+          </StepShell>
+        )}
+        {step === "label" && (
+          <p className="px-5 py-8 text-center text-sm text-zinc-500">Pago. A geração da etiqueta entra na próxima tarefa.</p>
         )}
       </div>
     </div>

@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { QuoteRequest } from "./schemas";
-import { createHistoryEntry, loadHistory, loadLastOrigin, pushHistory, saveLastOrigin, type HistoryEntry } from "./storage";
+import {
+  clearPendingPayment,
+  createHistoryEntry,
+  loadHistory,
+  loadLastOrigin,
+  loadPendingPayment,
+  pushHistory,
+  saveLastOrigin,
+  savePendingPayment,
+  type HistoryEntry,
+  type PendingPayment,
+} from "./storage";
 
 function fakeLocalStorage() {
   const store = new Map<string, string>();
@@ -111,5 +122,44 @@ describe("createHistoryEntry", () => {
     expect(createHistoryEntry({ ...request, destinationCep: "90010000" }, best).id).not.toBe(
       createHistoryEntry(request, best).id,
     );
+  });
+});
+
+describe("pending payment", () => {
+  beforeEach(() => {
+    vi.stubGlobal("localStorage", fakeLocalStorage());
+  });
+
+  const pending: PendingPayment = {
+    orders: ["a2db3844-f23e-4367-b6cf-02fb76413df5"],
+    total: 68.83,
+    label: "Correios · PAC para Cliente Ficticio",
+    pix: {
+      paymentId: "a2db3a3b-0000-4000-8000-000000000001",
+      amount: 68.83,
+      qrCodeUrl: "https://example.com/qr.svg",
+      copyPaste: "000201-FICTICIO",
+      expiresAt: "2026-09-29T16:43:06",
+    },
+    createdAt: 1000,
+  };
+
+  test("survives a closed tab", () => {
+    expect(loadPendingPayment()).toBeNull();
+    savePendingPayment(pending);
+    expect(loadPendingPayment()).toEqual(pending);
+  });
+
+  test("is forgotten once the orders are paid", () => {
+    savePendingPayment(pending);
+    clearPendingPayment();
+    expect(loadPendingPayment()).toBeNull();
+  });
+
+  test("ignores corrupt or incomplete data", () => {
+    localStorage.setItem("cotador:pendingPayment", "{nao json");
+    expect(loadPendingPayment()).toBeNull();
+    localStorage.setItem("cotador:pendingPayment", JSON.stringify({ orders: "x" }));
+    expect(loadPendingPayment()).toBeNull();
   });
 });

@@ -79,3 +79,47 @@ export function createHistoryEntry(request: QuoteRequest, best: QuoteOption): Hi
     bestCompany: best.company,
   };
 }
+
+const PENDING_KEY = "cotador:pendingPayment";
+
+export type PendingPix = { paymentId: string; amount: number; qrCodeUrl: string; copyPaste: string; expiresAt?: string };
+
+/** Orders waiting for a PIX to land, kept so a closed tab can resume without paying twice. */
+export type PendingPayment = {
+  orders: string[];
+  total: number;
+  /** Human summary, e.g. "Correios · PAC para Maria". */
+  label: string;
+  pix: PendingPix;
+  /** Epoch milliseconds. */
+  createdAt: number;
+};
+
+export function savePendingPayment(pending: PendingPayment): void {
+  write(PENDING_KEY, JSON.stringify(pending));
+}
+
+export function loadPendingPayment(): PendingPayment | null {
+  const raw = read(PENDING_KEY);
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<PendingPayment>;
+    const valid =
+      Array.isArray(value.orders) &&
+      value.orders.every((id) => typeof id === "string") &&
+      typeof value.total === "number" &&
+      typeof value.pix?.paymentId === "string" &&
+      typeof value.pix?.copyPaste === "string";
+    return valid ? (value as PendingPayment) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingPayment(): void {
+  try {
+    globalThis.localStorage?.removeItem(PENDING_KEY);
+  } catch {
+    // Storage may be blocked; nothing to clear then.
+  }
+}

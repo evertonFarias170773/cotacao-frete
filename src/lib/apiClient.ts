@@ -1,6 +1,19 @@
+/** Error from one of the app's API routes; carries the HTTP status and the JSON body. */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly body: Record<string, unknown> | null;
+
+  constructor(message: string, status: number, body: Record<string, unknown> | null) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 /**
  * Browser-side call to the app's own API routes. Throws an Error whose message can be shown
- * as is. An expired session sends the user to the login page.
+ * as is (an ApiError for HTTP errors). An expired session sends the user to the login page.
  */
 export async function callApi<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   let response: Response;
@@ -20,9 +33,10 @@ export async function callApi<T>(path: string, init: { method?: string; body?: u
     window.location.assign(`/entrar?para=${encodeURIComponent(window.location.pathname)}`);
   }
 
-  const body = (await response.json().catch(() => null)) as ({ error?: unknown } & Record<string, unknown>) | null;
+  const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
   if (!response.ok) {
-    throw new Error(typeof body?.error === "string" ? body.error : "Não foi possível concluir. Tente novamente.");
+    const message = typeof body?.error === "string" ? body.error : "Não foi possível concluir. Tente novamente.";
+    throw new ApiError(message, response.status, body);
   }
   return body as T;
 }

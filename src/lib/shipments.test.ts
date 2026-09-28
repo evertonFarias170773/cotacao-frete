@@ -7,6 +7,7 @@ import {
   APP_TAG,
   addToCart,
   createPixForOrders,
+  payOrders,
   listAgencies,
   pixStatus,
   removeFromCart,
@@ -268,5 +269,67 @@ describe("wallet and PIX", () => {
     const results = [];
     for (let i = 0; i < statuses.length; i++) results.push(await pixStatus("a2db3a3b-0000-4000-8000-000000000001"));
     expect(results).toEqual(["pending", "paid", "paid", "failed", "failed", "pending"]);
+  });
+});
+
+describe("payOrders", () => {
+  const cartList = fixture<{ data: { id: string; price: number }[] }>("cart-list");
+  const [orderA, orderB] = cartList.data.map((order) => order.id);
+  const paidOrder = fixture<{ id: string }>("order");
+  const checkout = fixture("checkout");
+
+  const routes = ({ balance, inCart = cartList.data, checkoutReply = () => jsonResponse(200, checkout) }: {
+    balance: number;
+    inCart?: typeof cartList.data;
+    checkoutReply?: () => Response;
+  }) => [
+    { method: "GET", path: /\/balance$/, reply: () => jsonResponse(200, { balance }) },
+    { method: "GET", path: /\/cart\?page=1$/, reply: () => jsonResponse(200, { data: inCart, last_page: 1 }) },
+    { method: "GET", path: /\/orders\/[\w-]+$/, reply: () => jsonResponse(200, paidOrder) },
+    { method: "POST", path: /\/shipment\/checkout$/, reply: checkoutReply },
+  ];
+
+  test("with enough balance, pays every order in one checkout", async () => {
+    const { calls } = fakeMelhorEnvio(routes({ balance: 500 }));
+    expect(await payOrders([orderA, orderB])).toEqual({ status: "paid", protocol: "PUR-202609144989" });
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ orders: [orderA, orderB] });
+  });
+
+  test("without enough balance, says how much PIX is missing and does not call checkout", async () => {
+    const { calls } = fakeMelhorEnvio(routes({ balance: 100 }));
+    expect(await payOrders([orderA, orderB])).toEqual({ status: "insufficient", pix: 37.66 });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  test("a repeated payment the API answers with 204 counts as paid", async () => {
+    fakeMelhorEnvio(routes({ balance: 500, checkoutReply: () => jsonResponse(204, null) }));
+    expect(await payOrders([orderA, orderB])).toEqual({ status: "paid" });
+  });
+
+  test("the documented 'already paid' 422 also counts as paid", async () => {
+    fakeMelhorEnvio(
+      routes({ balance: 500, checkoutReply: () => jsonResponse(422, { message: "One or more orders have already been paid." }) }),
+    );
+    expect(await payOrders([orderA, orderB])).toEqual({ status: "paid" });
+  });
+
+  test("orders already paid and gone from the cart are not charged again", async () => {
+    const { calls } = fakeMelhorEnvio(routes({ balance: 0, inCart: [] }));
+    expect(await payOrders([paidOrder.id])).toEqual({ status: "paid" });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  test("an order that is neither in the cart nor paid cannot be paid", async () => {
+    fakeMelhorEnvio([
+      { method: "GET", path: /\/balance$/, reply: () => jsonResponse(200, { balance: 500 }) },
+      { method: "GET", path: /\/cart\?page=1$/, reply: () => jsonResponse(200, { data: [], last_page: 1 }) },
+      { method: "GET", path: /\/orders\/[\w-]+$/, reply: () => jsonResponse(200, { id: orderA, status: "canceled", paid_at: null }) },
+    ]);
+    await expect(payOrders([orderA])).rejects.toMatchObject({ status: 409 });
+  });
+
+  test("other checkout refusals carry the API's reason", async () => {
+    fakeMelhorEnvio(routes({ balance: 500, checkoutReply: () => jsonResponse(422, { error: "Serviço indisponível." }) }));
+    await expect(payOrders([orderA, orderB])).rejects.toMatchObject({ status: 422, message: "Serviço indisponível." });
   });
 });

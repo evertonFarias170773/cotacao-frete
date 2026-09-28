@@ -108,6 +108,15 @@ const MAX_CART_PAGES = 10;
  * Throws 409 when any of them is no longer waiting in the cart.
  */
 export async function cartTotal(ids: string[]): Promise<number> {
+  const prices = await cartPrices(ids);
+  if (!ids.every((id) => prices.has(id))) throw new QuoteError(409, NOT_WAITING);
+  return round2(ids.reduce((sum, id) => sum + (prices.get(id) ?? 0), 0));
+}
+
+const NOT_WAITING = "Este envio não está mais aguardando pagamento. Confira na tela Envios.";
+
+/** Cart prices of whichever of these orders are still in the cart (unpaid). */
+async function cartPrices(ids: string[]): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
   for (let page = 1; page <= MAX_CART_PAGES; page++) {
     const response = await meRequest("GET", `${CART_PATH}?page=${page}`, undefined, { timeoutMessage: NO_ANSWER });
@@ -117,10 +126,60 @@ export async function cartTotal(ids: string[]): Promise<number> {
     for (const item of parsed.data.data) prices.set(item.id, item.price);
     if (ids.every((id) => prices.has(id)) || page >= (parsed.data.last_page ?? 1)) break;
   }
-  if (!ids.every((id) => prices.has(id))) {
-    throw new QuoteError(409, "Este envio não está mais aguardando pagamento. Confira na tela Envios.");
+  return prices;
+}
+
+const orderSchema = z.looseObject({
+  id: z.string(),
+  status: z.string().nullish(),
+  paid_at: z.string().nullish(),
+  tracking: z.string().nullish(),
+  generated_at: z.string().nullish(),
+});
+
+async function getOrder(id: string) {
+  const response = await meRequest("GET", `/api/v2/me/orders/${encodeURIComponent(id)}`, undefined, {
+    timeoutMessage: NO_ANSWER,
+  });
+  if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+  const parsed = orderSchema.safeParse(response.body);
+  if (!parsed.success) throw new QuoteError(502, "Resposta inesperada do Melhor Envio ao consultar o envio.");
+  return parsed.data;
+}
+
+export type PayResult = { status: "paid"; protocol?: string } | { status: "insufficient"; pix: number };
+
+const ALREADY_PAID = /already been paid|já (foi|foram) pag/i;
+
+/**
+ * Pays the orders with the wallet balance. Safe to repeat: orders already paid are not charged again
+ * (the API answers a repeated checkout with 204, or with the documented 422 "already been paid").
+ */
+export async function payOrders(ids: string[]): Promise<PayResult> {
+  const prices = await cartPrices(ids);
+  const outOfCart = ids.filter((id) => !prices.has(id));
+  for (const id of outOfCart) {
+    const order = await getOrder(id);
+    if (!order.paid_at) throw new QuoteError(409, NOT_WAITING);
   }
-  return round2(ids.reduce((sum, id) => sum + (prices.get(id) ?? 0), 0));
+  const pending = ids.filter((id) => prices.has(id));
+  if (pending.length === 0) return { status: "paid" };
+
+  const total = round2(pending.reduce((sum, id) => sum + (prices.get(id) ?? 0), 0));
+  const missing = pixTopUpFor(total, await walletBalance());
+  if (missing > 0) return { status: "insufficient", pix: missing };
+
+  const response = await meRequest("POST", "/api/v2/me/shipment/checkout", { orders: pending }, {
+    timeoutMessage: "O Melhor Envio não confirmou o pagamento. Confira na tela Envios antes de tentar de novo.",
+  });
+  if (response.status === 204) return { status: "paid" };
+  if (!isOk(response.status)) {
+    const message = JSON.stringify(response.body ?? "");
+    if (response.status === 422 && ALREADY_PAID.test(message)) return { status: "paid" };
+    throw mapApiError(response.status, response.body);
+  }
+  const protocol = (response.body as { purchase?: { protocol?: unknown } } | null)?.purchase?.protocol;
+  return typeof protocol === "string" ? { status: "paid", protocol } : { status: "paid" };
 }
 
 export type PixCharge = { paymentId: string; amount: number; qrCodeUrl: string; copyPaste: string; expiresAt?: string };
