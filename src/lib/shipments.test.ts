@@ -448,6 +448,21 @@ describe("labelFile", () => {
     });
   });
 
+  test("refuses anything that is not a PDF, so nothing else is served from the app's origin", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        url.startsWith("https://melhorenvio.com.br")
+          ? jsonResponse(200, FILE_URL)
+          : new Response("<html><script>alert(1)</script></html>", { headers: { "Content-Type": "text/html" } }),
+      ),
+    );
+    await expect(labelFile(ORDER)).rejects.toMatchObject({
+      status: 502,
+      message: "O arquivo recebido não é uma etiqueta em PDF. Tente de novo em instantes.",
+    });
+  });
+
   test("refuses a file address that is not https", async () => {
     fakeServers(() => jsonResponse(200, "http://inseguro.example/etiqueta.pdf"));
     await expect(labelFile(ORDER)).rejects.toMatchObject({ status: 502 });

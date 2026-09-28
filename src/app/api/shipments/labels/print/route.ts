@@ -24,7 +24,8 @@ export async function GET(request: Request) {
     const file = await labelFile(order.data);
     return new Response(file.bytes, {
       headers: {
-        "Content-Type": file.contentType,
+        "Content-Type": "application/pdf",
+        "X-Content-Type-Options": "nosniff",
         "Content-Disposition": `inline; filename="etiqueta-${order.data}.pdf"`,
         "Cache-Control": "private, no-store",
       },

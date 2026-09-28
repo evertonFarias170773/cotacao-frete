@@ -323,7 +323,11 @@ export async function labelFile(orderId: string): Promise<LabelFile> {
     throw new QuoteError(504, "Não foi possível baixar a etiqueta. Tente novamente.");
   }
   if (!file.ok) throw new QuoteError(502, "Não foi possível baixar a etiqueta. Tente novamente.");
-  return { bytes: await file.arrayBuffer(), contentType: file.headers.get("content-type") ?? "application/pdf" };
+  // Served from the app's own origin, so only a PDF is ever passed on.
+  if (!(file.headers.get("content-type") ?? "").toLowerCase().includes("pdf")) {
+    throw new QuoteError(502, "O arquivo recebido não é uma etiqueta em PDF. Tente de novo em instantes.");
+  }
+  return { bytes: await file.arrayBuffer(), contentType: "application/pdf" };
 }
 
 /** Order statuses the listing can be filtered by (Melhor Envio values). */
