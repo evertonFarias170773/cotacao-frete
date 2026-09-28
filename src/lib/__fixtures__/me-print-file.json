@@ -1,0 +1,10 @@
+{
+  "request": null,
+  "status": 422,
+  "body": {
+    "message": "E-PRT-0011: O envio precisa estar gerado para que a impressão seja processada.",
+    "suggestion": "Gere o envio e aguarde a geração ser concluida para a impressão ser processada.",
+    "request_id": "8681778242557482900",
+    "context": []
+  }
+}

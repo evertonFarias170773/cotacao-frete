@@ -1,0 +1,222 @@
+{
+  "request": null,
+  "status": 200,
+  "body": {
+    "current_page": 1,
+    "data": [
+      {
+        "id": "a2db3844-f23e-4367-b6cf-02fb76413df5",
+        "protocol": "ORD-202609298862",
+        "purchase_id": "a2db3848-b286-478e-b068-fee4c7c1f236",
+        "service_id": 1,
+        "contract": "9912415671",
+        "service_code": "03298",
+        "quote": 68.83,
+        "price": 68.83,
+        "coupon": null,
+        "discount": 0,
+        "delivery_min": 5,
+        "delivery_max": 6,
+        "status": "released",
+        "reminder": null,
+        "insurance_value": 1215,
+        "weight": null,
+        "width": null,
+        "height": null,
+        "length": null,
+        "diameter": null,
+        "format": "box",
+        "billed_weight": 9.45,
+        "receipt": false,
+        "own_hand": false,
+        "collect": false,
+        "collect_scheduled_at": null,
+        "reverse": 0,
+        "non_commercial": true,
+        "authorization_code": null,
+        "tracking": null,
+        "self_tracking": null,
+        "delivery_receipt": null,
+        "additional_info": {
+          "origin_ibge": "4314902",
+          "destination_ibge": "3550308"
+        },
+        "cte_key": null,
+        "paid_at": "2026-09-28 19:37:38",
+        "generated_at": null,
+        "posted_at": null,
+        "delivered_at": null,
+        "canceled_at": null,
+        "suspended_at": null,
+        "expired_at": null,
+        "created_at": "2026-09-28 19:37:35",
+        "updated_at": "2026-09-28 19:37:40",
+        "received_at": null,
+        "risk": false,
+        "can_open_ticket": true,
+        "ticket_opening": {
+          "message": null,
+          "allowed": true,
+          "type": null
+        },
+        "details": {
+          "balance": "0.00",
+          "gateway": "68.83",
+          "discount": "0.00",
+          "subtotal": "68.83",
+          "total": "68.83"
+        },
+        "receipt_code": null,
+        "is_show_eticket_action": false,
+        "is_show_correios_reverse_ppn_action": false,
+        "from": {
+          "name": "Remetente Ficticio LTDA",
+          "phone": "phone-ficticio",
+          "email": "email-ficticio",
+          "document": null,
+          "company_document": "46867029000176",
+          "state_register": null,
+          "postal_code": "90660130",
+          "address": "Rua do Remetente Teste",
+          "location_number": "100",
+          "complement": null,
+          "district": "Medianeira",
+          "city": "Porto Alegre",
+          "state_abbr": "RS",
+          "country_id": "BR",
+          "latitude": null,
+          "longitude": null,
+          "note": null,
+          "economic_activity_code": null
+        },
+        "to": {
+          "name": "Cliente Ficticio",
+          "phone": "phone-ficticio",
+          "email": "email-ficticio",
+          "document": "52998224725",
+          "company_document": null,
+          "state_register": null,
+          "postal_code": "01018020",
+          "address": "Rua Anita Garibaldi",
+          "location_number": "25",
+          "complement": null,
+          "district": "Se",
+          "city": "Sao Paulo",
+          "state_abbr": "SP",
+          "country_id": "BR",
+          "latitude": null,
+          "longitude": null,
+          "note": null,
+          "economic_activity_code": null
+        },
+        "service": {
+          "id": 1,
+          "name": "PAC",
+          "type": "normal",
+          "range": "interstate",
+          "company": {
+            "id": 1,
+            "name": "Correios",
+            "picture": "picture-ficticio",
+            "tracking_link": "https://www.melhorrastreio.com.br/rastreio/",
+            "document": "34028316000103"
+          }
+        },
+        "invoice": null,
+        "tags": [
+          {
+            "tag": "spike-sandbox",
+            "url": null
+          }
+        ],
+        "products": [
+          {
+            "name": "Pulseira Tri Band",
+            "quantity": 1,
+            "unitary_value": 1215,
+            "weight": null
+          }
+        ],
+        "conciliation": null,
+        "volumes": [
+          {
+            "id": 301900,
+            "height": "22.00",
+            "width": "22.00",
+            "length": "32.00",
+            "diameter": "0.00",
+            "weight": "9.45",
+            "format": "box",
+            "created_at": "2026-09-28 19:37:35",
+            "updated_at": "2026-09-28 19:37:35"
+          }
+        ],
+        "dce": {
+          "id": 14064,
+          "full_key": "43260902351877001396990030000140622100646361",
+          "order_id": "a2db3844-f23e-4367-b6cf-02fb76413df5",
+          "uf_code": "43",
+          "year_month": "2609",
+          "issuer_document": "02351877001396",
+          "model": "99",
+          "serie": "003",
+          "number": 14062,
+          "emission_type": 2,
+          "issuer_type": "1",
+          "site_code": "0",
+          "code": "064636",
+          "dv": "1",
+          "signature_qrcode": null,
+          "created_at": "2026-09-28T19:37:39.000000Z",
+          "updated_at": "2026-09-28T19:37:40.000000Z",
+          "protocol": null,
+          "dispatched_at": null,
+          "integrated_at": null,
+          "canceled_at": null,
+          "access_key": "4326 0902 3518 7700 1396 9900 3000 0140 6221 0064 6361",
+          "sign": null,
+          "env": "2",
+          "occurrences": [
+            {
+              "id": 15325,
+              "order_dce_key_id": 14064,
+              "data": "Emissão em contingência acionada",
+              "created_at": "2026-09-28T19:37:40.000000Z",
+              "updated_at": "2026-09-28T19:37:40.000000Z"
+            }
+          ]
+        },
+        "freight_arrangements": [],
+        "pudos_return_code": null,
+        "tickets": []
+      }
+    ],
+    "first_page_url": "https://sandbox.melhorenvio.com.br/api/v2/me/orders/search?page=1",
+    "from": 1,
+    "last_page": 1,
+    "last_page_url": "https://sandbox.melhorenvio.com.br/api/v2/me/orders/search?page=1",
+    "links": [
+      {
+        "url": null,
+        "label": "&laquo; Anterior",
+        "active": false
+      },
+      {
+        "url": "https://sandbox.melhorenvio.com.br/api/v2/me/orders/search?page=1",
+        "label": "1",
+        "active": true
+      },
+      {
+        "url": null,
+        "label": "Próximo &raquo;",
+        "active": false
+      }
+    ],
+    "next_page_url": null,
+    "path": "https://sandbox.melhorenvio.com.br/api/v2/me/orders/search",
+    "per_page": 10,
+    "prev_page_url": null,
+    "to": 1,
+    "total": 1
+  }
+}

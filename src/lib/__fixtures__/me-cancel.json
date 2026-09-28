@@ -1,0 +1,17 @@
+{
+  "request": {
+    "order": {
+      "id": "a2db3845-d38f-4fbd-a233-26d4314c7810",
+      "reason_id": "2",
+      "description": "Teste do cotador no sandbox"
+    }
+  },
+  "status": 200,
+  "body": {
+    "key": "a2db384f-5da1-4888-92b8-0a625717aa93",
+    "a2db3845-d38f-4fbd-a233-26d4314c7810": {
+      "canceled": true,
+      "status": "pending"
+    }
+  }
+}

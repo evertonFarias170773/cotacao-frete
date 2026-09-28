@@ -1,0 +1,175 @@
+{
+  "request": null,
+  "status": 200,
+  "body": {
+    "id": "a2db3844-f23e-4367-b6cf-02fb76413df5",
+    "protocol": "ORD-202609298862",
+    "purchase_id": "a2db3848-b286-478e-b068-fee4c7c1f236",
+    "service_id": 1,
+    "agency_id": null,
+    "contract": "9912415671",
+    "service_code": "03298",
+    "quote": 68.83,
+    "price": 68.83,
+    "coupon": null,
+    "discount": 0,
+    "delivery_min": 5,
+    "delivery_max": 6,
+    "status": "released",
+    "reminder": null,
+    "insurance_value": 1215,
+    "weight": null,
+    "width": null,
+    "height": null,
+    "length": null,
+    "diameter": null,
+    "format": "box",
+    "billed_weight": 9.45,
+    "receipt": false,
+    "own_hand": false,
+    "collect": false,
+    "collect_scheduled_at": null,
+    "reverse": 0,
+    "non_commercial": true,
+    "authorization_code": null,
+    "tracking": null,
+    "self_tracking": null,
+    "delivery_receipt": null,
+    "additional_info": {
+      "origin_ibge": "4314902",
+      "destination_ibge": "3550308"
+    },
+    "cte_key": null,
+    "paid_at": "2026-09-28 19:37:38",
+    "generated_at": null,
+    "posted_at": null,
+    "delivered_at": null,
+    "canceled_at": null,
+    "suspended_at": null,
+    "expired_at": null,
+    "created_at": "2026-09-28 19:37:35",
+    "updated_at": "2026-09-28 19:37:40",
+    "parse_pi_at": null,
+    "received_at": null,
+    "risk": false,
+    "files": [],
+    "can_open_ticket": true,
+    "ticket_opening": {
+      "message": null,
+      "allowed": true,
+      "type": null
+    },
+    "from": {
+      "name": "Remetente Ficticio LTDA",
+      "phone": "phone-ficticio",
+      "email": "email-ficticio",
+      "document": null,
+      "company_document": "46867029000176",
+      "state_register": null,
+      "postal_code": "90660130",
+      "address": "Rua do Remetente Teste",
+      "location_number": "100",
+      "complement": null,
+      "district": "Medianeira",
+      "city": "Porto Alegre",
+      "state_abbr": "RS",
+      "country_id": "BR",
+      "latitude": null,
+      "longitude": null,
+      "note": null,
+      "economic_activity_code": null
+    },
+    "to": {
+      "name": "Cliente Ficticio",
+      "phone": "phone-ficticio",
+      "email": "email-ficticio",
+      "document": "52998224725",
+      "company_document": null,
+      "state_register": null,
+      "postal_code": "01018020",
+      "address": "Rua Anita Garibaldi",
+      "location_number": "25",
+      "complement": null,
+      "district": "Se",
+      "city": "Sao Paulo",
+      "state_abbr": "SP",
+      "country_id": "BR",
+      "latitude": null,
+      "longitude": null,
+      "note": null,
+      "economic_activity_code": null
+    },
+    "service": {
+      "id": 1,
+      "name": "PAC",
+      "status": "available",
+      "type": "normal",
+      "range": "interstate",
+      "restrictions": "{\"insurance_value\":{\"min\":0,\"max\":3000,\"max_dec\":3000},\"formats\":{\"box\":{\"weight\":{\"min\":0,\"max\":30},\"width\":{\"min\":11,\"max\":100},\"height\":{\"min\":2,\"max\":100},\"length\":{\"min\":16,\"max\":100},\"sum\":200},\"roll\":{\"weight\":{\"min\":0,\"max\":30},\"diameter\":{\"min\":5,\"max\":91},\"length\":{\"min\":18,\"max\":100},\"sum\":200},\"letter\":{\"weight\":{\"min\":0,\"max\":0.5},\"width\":{\"min\":11,\"max\":60},\"length\":{\"min\":16,\"max\":60}}}}",
+      "requirements": "[\"names\",\"addresses\",\"documents\"]",
+      "optionals": "[\"AR\",\"MP\",\"VD\"]",
+      "company": {
+        "id": 1,
+        "name": "Correios",
+        "has_grouped_volumes": 0,
+        "status": "available",
+        "picture": "picture-ficticio",
+        "tracking_link": "https://www.melhorrastreio.com.br/rastreio/",
+        "use_own_contract": false,
+        "batch_size": 1
+      }
+    },
+    "agency": null,
+    "invoice": null,
+    "tags": [
+      {
+        "tag": "spike-sandbox",
+        "url": null
+      },
+      {
+        "tag": "printed",
+        "url": "2026-09-28T19:37:40+00:00"
+      }
+    ],
+    "products": [
+      {
+        "name": "Pulseira Tri Band",
+        "quantity": 1,
+        "unitary_value": 1215,
+        "weight": null
+      }
+    ],
+    "t_printer": {
+      "id": 37561,
+      "order_id": "a2db3844-f23e-4367-b6cf-02fb76413df5",
+      "dispatched_at": null,
+      "printed_at": null,
+      "failed_at": null
+    },
+    "conciliation": null,
+    "volumes": [
+      {
+        "id": 301900,
+        "height": "22.00",
+        "width": "22.00",
+        "length": "32.00",
+        "diameter": "0.00",
+        "weight": "9.45",
+        "format": "box",
+        "created_at": "2026-09-28 19:37:35",
+        "updated_at": "2026-09-28 19:37:35"
+      }
+    ],
+    "generated_key": {
+      "generate_key": "a2db384a-4aca-491c-8c96-b0b5aca99e4e",
+      "order_id": "a2db3844-f23e-4367-b6cf-02fb76413df5",
+      "data": "Não possível solicitar o processo de geração da etiqueta.",
+      "attempts": 0,
+      "dispatched_at": "2026-09-28 19:37:39",
+      "failed_at": "2026-09-28 19:37:41",
+      "id": 45915,
+      "finished_at": "2026-09-28 19:37:41"
+    },
+    "tickets": []
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "request": {
+    "service": 3,
+    "from": {
+      "name": "Remetente Ficticio LTDA",
+      "phone": "phone-ficticio",
+      "email": "email-ficticio",
+      "company_document": "46867029000176",
+      "state_register": "",
+      "address": "Rua do Remetente Teste",
+      "number": "100",
+      "district": "Medianeira",
+      "city": "Porto Alegre",
+      "postal_code": "90660130",
+      "country_id": "BR",
+      "state_abbr": "RS"
+    },
+    "to": {
+      "name": "Cliente Ficticio",
+      "phone": "phone-ficticio",
+      "email": "email-ficticio",
+      "document": "52998224725",
+      "address": "Rua Anita Garibaldi",
+      "number": "25",
+      "district": "Se",
+      "city": "Sao Paulo",
+      "postal_code": "01018020",
+      "country_id": "BR",
+      "state_abbr": "SP"
+    },
+    "products": [
+      {
+        "name": "Pulseira Tri Band",
+        "quantity": "1",
+        "unitary_value": "1000.00"
+      }
+    ],
+    "volumes": [
+      {
+        "height": 22,
+        "width": 22,
+        "length": 32,
+        "weight": 9.45
+      }
+    ],
+    "options": {
+      "insurance_value": 1000,
+      "receipt": false,
+      "own_hand": false,
+      "reverse": false,
+      "non_commercial": true,
+      "platform": "Cotador de Fretes",
+      "tags": [
+        {
+          "tag": "spike-sandbox",
+          "url": null
+        }
+      ]
+    }
+  },
+  "status": 201,
+  "body": {
+    "id": "a2db39c0-a382-4e3e-befa-527d7cd31bbd",
+    "protocol": "ORD-202609298865",
+    "purchase_id": null,
+    "service_id": 3,
+    "agency_id": null,
+    "contract": null,
+    "service_code": null,
+    "quote": 68.87,
+    "price": 68.87,
+    "coupon": null,
+    "discount": 0,
+    "delivery_min": 8,
+    "delivery_max": 9,
+    "status": "pending",
+    "reminder": null,
+    "insurance_value": 1000,
+    "weight": null,
+    "width": null,
+    "height": null,
+    "length": null,
+    "diameter": null,
+    "format": "box",
+    "billed_weight": 9.45,
+    "receipt": false,
+    "own_hand": false,
+    "collect": false,
+    "collect_scheduled_at": null,
+    "reverse": 0,
+    "non_commercial": true,
+    "authorization_code": null,
+    "tracking": null,
+    "self_tracking": null,
+    "delivery_receipt": null,
+    "additional_info": {
+      "origin_ibge": "4314902",
+      "destination_ibge": "3550308"
+    },
+    "cte_key": null,
+    "paid_at": null,
+    "generated_at": null,
+    "posted_at": null,
+    "delivered_at": null,
+    "canceled_at": null,
+    "suspended_at": null,
+    "expired_at": null,
+    "created_at": "2026-09-28 19:41:44",
+    "updated_at": "2026-09-28 19:41:44",
+    "parse_pi_at": null,
+    "received_at": null,
+    "risk": false
+  }
+}

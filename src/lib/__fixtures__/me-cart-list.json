@@ -1,0 +1,318 @@
+{
+  "request": null,
+  "status": 200,
+  "body": {
+    "current_page": 1,
+    "data": [
+      {
+        "id": "a2db3845-d38f-4fbd-a233-26d4314c7810",
+        "protocol": "ORD-202609298863",
+        "purchase_id": null,
+        "service_id": 1,
+        "agency_id": null,
+        "contract": null,
+        "service_code": null,
+        "quote": 68.83,
+        "price": 68.83,
+        "coupon": null,
+        "discount": 0,
+        "delivery_min": 5,
+        "delivery_max": 6,
+        "status": "pending",
+        "reminder": null,
+        "insurance_value": 1215,
+        "weight": null,
+        "width": null,
+        "height": null,
+        "length": null,
+        "diameter": null,
+        "format": "box",
+        "billed_weight": 9.45,
+        "receipt": false,
+        "own_hand": false,
+        "collect": false,
+        "collect_scheduled_at": null,
+        "reverse": 0,
+        "non_commercial": true,
+        "authorization_code": null,
+        "tracking": null,
+        "self_tracking": null,
+        "delivery_receipt": null,
+        "additional_info": {
+          "origin_ibge": "4314902",
+          "destination_ibge": "3550308"
+        },
+        "cte_key": null,
+        "paid_at": null,
+        "generated_at": null,
+        "posted_at": null,
+        "delivered_at": null,
+        "canceled_at": null,
+        "suspended_at": null,
+        "expired_at": null,
+        "created_at": "2026-09-28 19:37:36",
+        "updated_at": "2026-09-28 19:37:36",
+        "parse_pi_at": null,
+        "received_at": null,
+        "risk": false,
+        "from": {
+          "name": "Remetente Ficticio LTDA",
+          "phone": "phone-ficticio",
+          "email": "email-ficticio",
+          "document": null,
+          "company_document": "46867029000176",
+          "state_register": null,
+          "postal_code": "90660130",
+          "address": "Rua do Remetente Teste",
+          "location_number": "100",
+          "complement": null,
+          "district": "Medianeira",
+          "city": "Porto Alegre",
+          "state_abbr": "RS",
+          "country_id": "BR",
+          "latitude": null,
+          "longitude": null,
+          "note": null,
+          "economic_activity_code": null
+        },
+        "to": {
+          "name": "Cliente Ficticio",
+          "phone": "phone-ficticio",
+          "email": "email-ficticio",
+          "document": "52998224725",
+          "company_document": null,
+          "state_register": null,
+          "postal_code": "01018020",
+          "address": "Rua Anita Garibaldi",
+          "location_number": "25",
+          "complement": null,
+          "district": "Se",
+          "city": "Sao Paulo",
+          "state_abbr": "SP",
+          "country_id": "BR",
+          "latitude": null,
+          "longitude": null,
+          "note": null,
+          "economic_activity_code": null
+        },
+        "service": {
+          "id": 1,
+          "name": "PAC",
+          "status": "available",
+          "type": "normal",
+          "range": "interstate",
+          "restrictions": "{\"insurance_value\":{\"min\":0,\"max\":3000,\"max_dec\":3000},\"formats\":{\"box\":{\"weight\":{\"min\":0,\"max\":30},\"width\":{\"min\":11,\"max\":100},\"height\":{\"min\":2,\"max\":100},\"length\":{\"min\":16,\"max\":100},\"sum\":200},\"roll\":{\"weight\":{\"min\":0,\"max\":30},\"diameter\":{\"min\":5,\"max\":91},\"length\":{\"min\":18,\"max\":100},\"sum\":200},\"letter\":{\"weight\":{\"min\":0,\"max\":0.5},\"width\":{\"min\":11,\"max\":60},\"length\":{\"min\":16,\"max\":60}}}}",
+          "requirements": "[\"names\",\"addresses\",\"documents\"]",
+          "optionals": "[\"AR\",\"MP\",\"VD\"]",
+          "company": {
+            "id": 1,
+            "name": "Correios",
+            "has_grouped_volumes": 0,
+            "status": "available",
+            "picture": "picture-ficticio",
+            "tracking_link": "https://www.melhorrastreio.com.br/rastreio/",
+            "use_own_contract": false,
+            "batch_size": 1
+          }
+        },
+        "invoice": null,
+        "tags": [
+          {
+            "tag": "spike-sandbox",
+            "url": null
+          }
+        ],
+        "products": [
+          {
+            "name": "Pulseira Tri Band",
+            "quantity": 1,
+            "unitary_value": 1215,
+            "weight": null
+          }
+        ],
+        "volumes": [
+          {
+            "id": 301901,
+            "height": "22.00",
+            "width": "22.00",
+            "length": "32.00",
+            "diameter": "0.00",
+            "weight": "9.45",
+            "format": "box",
+            "created_at": "2026-09-28 19:37:36",
+            "updated_at": "2026-09-28 19:37:36"
+          }
+        ],
+        "dce": null
+      },
+      {
+        "id": "a2db3844-f23e-4367-b6cf-02fb76413df5",
+        "protocol": "ORD-202609298862",
+        "purchase_id": null,
+        "service_id": 1,
+        "agency_id": null,
+        "contract": null,
+        "service_code": null,
+        "quote": 68.83,
+        "price": 68.83,
+        "coupon": null,
+        "discount": 0,
+        "delivery_min": 5,
+        "delivery_max": 6,
+        "status": "pending",
+        "reminder": null,
+        "insurance_value": 1215,
+        "weight": null,
+        "width": null,
+        "height": null,
+        "length": null,
+        "diameter": null,
+        "format": "box",
+        "billed_weight": 9.45,
+        "receipt": false,
+        "own_hand": false,
+        "collect": false,
+        "collect_scheduled_at": null,
+        "reverse": 0,
+        "non_commercial": true,
+        "authorization_code": null,
+        "tracking": null,
+        "self_tracking": null,
+        "delivery_receipt": null,
+        "additional_info": {
+          "origin_ibge": "4314902",
+          "destination_ibge": "3550308"
+        },
+        "cte_key": null,
+        "paid_at": null,
+        "generated_at": null,
+        "posted_at": null,
+        "delivered_at": null,
+        "canceled_at": null,
+        "suspended_at": null,
+        "expired_at": null,
+        "created_at": "2026-09-28 19:37:35",
+        "updated_at": "2026-09-28 19:37:35",
+        "parse_pi_at": null,
+        "received_at": null,
+        "risk": false,
+        "from": {
+          "name": "Remetente Ficticio LTDA",
+          "phone": "phone-ficticio",
+          "email": "email-ficticio",
+          "document": null,
+          "company_document": "46867029000176",
+          "state_register": null,
+          "postal_code": "90660130",
+          "address": "Rua do Remetente Teste",
+          "location_number": "100",
+          "complement": null,
+          "district": "Medianeira",
+          "city": "Porto Alegre",
+          "state_abbr": "RS",
+          "country_id": "BR",
+          "latitude": null,
+          "longitude": null,
+          "note": null,
+          "economic_activity_code": null
+        },
+        "to": {
+          "name": "Cliente Ficticio",
+          "phone": "phone-ficticio",
+          "email": "email-ficticio",
+          "document": "52998224725",
+          "company_document": null,
+          "state_register": null,
+          "postal_code": "01018020",
+          "address": "Rua Anita Garibaldi",
+          "location_number": "25",
+          "complement": null,
+          "district": "Se",
+          "city": "Sao Paulo",
+          "state_abbr": "SP",
+          "country_id": "BR",
+          "latitude": null,
+          "longitude": null,
+          "note": null,
+          "economic_activity_code": null
+        },
+        "service": {
+          "id": 1,
+          "name": "PAC",
+          "status": "available",
+          "type": "normal",
+          "range": "interstate",
+          "restrictions": "{\"insurance_value\":{\"min\":0,\"max\":3000,\"max_dec\":3000},\"formats\":{\"box\":{\"weight\":{\"min\":0,\"max\":30},\"width\":{\"min\":11,\"max\":100},\"height\":{\"min\":2,\"max\":100},\"length\":{\"min\":16,\"max\":100},\"sum\":200},\"roll\":{\"weight\":{\"min\":0,\"max\":30},\"diameter\":{\"min\":5,\"max\":91},\"length\":{\"min\":18,\"max\":100},\"sum\":200},\"letter\":{\"weight\":{\"min\":0,\"max\":0.5},\"width\":{\"min\":11,\"max\":60},\"length\":{\"min\":16,\"max\":60}}}}",
+          "requirements": "[\"names\",\"addresses\",\"documents\"]",
+          "optionals": "[\"AR\",\"MP\",\"VD\"]",
+          "company": {
+            "id": 1,
+            "name": "Correios",
+            "has_grouped_volumes": 0,
+            "status": "available",
+            "picture": "picture-ficticio",
+            "tracking_link": "https://www.melhorrastreio.com.br/rastreio/",
+            "use_own_contract": false,
+            "batch_size": 1
+          }
+        },
+        "invoice": null,
+        "tags": [
+          {
+            "tag": "spike-sandbox",
+            "url": null
+          }
+        ],
+        "products": [
+          {
+            "name": "Pulseira Tri Band",
+            "quantity": 1,
+            "unitary_value": 1215,
+            "weight": null
+          }
+        ],
+        "volumes": [
+          {
+            "id": 301900,
+            "height": "22.00",
+            "width": "22.00",
+            "length": "32.00",
+            "diameter": "0.00",
+            "weight": "9.45",
+            "format": "box",
+            "created_at": "2026-09-28 19:37:35",
+            "updated_at": "2026-09-28 19:37:35"
+          }
+        ],
+        "dce": null
+      }
+    ],
+    "first_page_url": "https://sandbox.melhorenvio.com.br/api/v2/me/cart?page=1",
+    "from": 1,
+    "last_page": 1,
+    "last_page_url": "https://sandbox.melhorenvio.com.br/api/v2/me/cart?page=1",
+    "links": [
+      {
+        "url": null,
+        "label": "&laquo; Anterior",
+        "active": false
+      },
+      {
+        "url": "https://sandbox.melhorenvio.com.br/api/v2/me/cart?page=1",
+        "label": "1",
+        "active": true
+      },
+      {
+        "url": null,
+        "label": "Próximo &raquo;",
+        "active": false
+      }
+    ],
+    "next_page_url": null,
+    "path": "https://sandbox.melhorenvio.com.br/api/v2/me/cart",
+    "per_page": 10,
+    "prev_page_url": null,
+    "to": 2,
+    "total": 2
+  }
+}

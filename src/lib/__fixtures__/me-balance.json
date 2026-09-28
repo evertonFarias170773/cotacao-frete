@@ -1,0 +1,9 @@
+{
+  "request": null,
+  "status": 200,
+  "body": {
+    "balance": 10000,
+    "reserved": 0,
+    "debts": 0
+  }
+}

@@ -1,0 +1,251 @@
+{
+  "request": {
+    "from": {
+      "postal_code": "90660130"
+    },
+    "to": {
+      "postal_code": "01018020"
+    },
+    "volumes": [
+      {
+        "height": 21.6,
+        "width": 22,
+        "length": 32,
+        "weight": 9.45,
+        "insurance": 1215
+      },
+      {
+        "height": 21.6,
+        "width": 22,
+        "length": 32,
+        "weight": 9.45,
+        "insurance": 1215
+      }
+    ],
+    "options": {
+      "receipt": false,
+      "own_hand": false
+    }
+  },
+  "status": 200,
+  "body": [
+    {
+      "id": 1,
+      "name": "PAC",
+      "price": "137.66",
+      "custom_price": "137.66",
+      "discount": "0.00",
+      "currency": "R$",
+      "delivery_time": 6,
+      "delivery_range": {
+        "min": 5,
+        "max": 6
+      },
+      "custom_delivery_time": 6,
+      "custom_delivery_range": {
+        "min": 5,
+        "max": 6
+      },
+      "packages": [
+        {
+          "price": "68.83",
+          "discount": "0.00",
+          "format": "box",
+          "dimensions": {
+            "height": 21,
+            "width": 22,
+            "length": 32
+          },
+          "weight": "9.45",
+          "insurance_value": "1215.00"
+        },
+        {
+          "price": "68.83",
+          "discount": "0.00",
+          "format": "box",
+          "dimensions": {
+            "height": 21,
+            "width": 22,
+            "length": 32
+          },
+          "weight": "9.45",
+          "insurance_value": "1215.00"
+        }
+      ],
+      "additional_services": {
+        "receipt": false,
+        "own_hand": false,
+        "collect": false
+      },
+      "company": {
+        "id": 1,
+        "name": "Correios",
+        "picture": "picture-ficticio"
+      }
+    },
+    {
+      "id": 2,
+      "name": "SEDEX",
+      "price": "231.84",
+      "custom_price": "231.84",
+      "discount": "0.00",
+      "currency": "R$",
+      "delivery_time": 2,
+      "delivery_range": {
+        "min": 1,
+        "max": 2
+      },
+      "custom_delivery_time": 2,
+      "custom_delivery_range": {
+        "min": 1,
+        "max": 2
+      },
+      "packages": [
+        {
+          "price": "115.92",
+          "discount": "0.00",
+          "format": "box",
+          "dimensions": {
+            "height": 21,
+            "width": 22,
+            "length": 32
+          },
+          "weight": "9.45",
+          "insurance_value": "1215.00"
+        },
+        {
+          "price": "115.92",
+          "discount": "0.00",
+          "format": "box",
+          "dimensions": {
+            "height": 21,
+            "width": 22,
+            "length": 32
+          },
+          "weight": "9.45",
+          "insurance_value": "1215.00"
+        }
+      ],
+      "additional_services": {
+        "receipt": false,
+        "own_hand": false,
+        "collect": false
+      },
+      "company": {
+        "id": 1,
+        "name": "Correios",
+        "picture": "picture-ficticio"
+      }
+    },
+    {
+      "id": 3,
+      "name": ".Package",
+      "price": "142.67",
+      "custom_price": "142.67",
+      "discount": "0.00",
+      "currency": "R$",
+      "delivery_time": 9,
+      "delivery_range": {
+        "min": 8,
+        "max": 9
+      },
+      "custom_delivery_time": 9,
+      "custom_delivery_range": {
+        "min": 8,
+        "max": 9
+      },
+      "packages": [
+        {
+          "format": "box",
+          "dimensions": {
+            "height": 21,
+            "width": 22,
+            "length": 32
+          },
+          "weight": "9.45",
+          "insurance_value": "1215.00"
+        },
+        {
+          "format": "box",
+          "dimensions": {
+            "height": 21,
+            "width": 22,
+            "length": 32
+          },
+          "weight": "9.45",
+          "insurance_value": "1215.00"
+        }
+      ],
+      "additional_services": {
+        "receipt": false,
+        "own_hand": false,
+        "collect": false
+      },
+      "company": {
+        "id": 2,
+        "name": "Jadlog",
+        "picture": "picture-ficticio"
+      }
+    },
+    {
+      "id": 4,
+      "name": ".Com",
+      "price": "286.30",
+      "custom_price": "286.30",
+      "discount": "0.00",
+      "currency": "R$",
+      "delivery_time": 8,
+      "delivery_range": {
+        "min": 7,
+        "max": 8
+      },
+      "custom_delivery_time": 8,
+      "custom_delivery_range": {
+        "min": 7,
+        "max": 8
+      },
+      "packages": [
+        {
+          "format": "box",
+          "dimensions": {
+            "height": 21,
+            "width": 22,
+            "length": 32
+          },
+          "weight": "9.45",
+          "insurance_value": "1215.00"
+        },
+        {
+          "format": "box",
+          "dimensions": {
+            "height": 21,
+            "width": 22,
+            "length": 32
+          },
+          "weight": "9.45",
+          "insurance_value": "1215.00"
+        }
+      ],
+      "additional_services": {
+        "receipt": false,
+        "own_hand": false,
+        "collect": false
+      },
+      "company": {
+        "id": 2,
+        "name": "Jadlog",
+        "picture": "picture-ficticio"
+      }
+    },
+    {
+      "id": 17,
+      "name": "Mini Envios",
+      "error": "Dimensões do objeto ultrapassam o limite da transportadora.",
+      "company": {
+        "id": 1,
+        "name": "Correios",
+        "picture": "picture-ficticio"
+      }
+    }
+  ]
+}
