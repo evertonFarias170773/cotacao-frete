@@ -7,6 +7,7 @@ import { CartBuildError, buildCartItems, type Party } from "./cart";
 import { QuoteError, mapApiError } from "./errors";
 import { meRequest } from "./melhorEnvio";
 import { contractBlockReason, toRecipientParty, type ContractRequest } from "./recipient";
+import { pixTopUpFor } from "./wallet";
 
 /** Tag on every order the app creates, so the shipments screen can tell them apart. */
 export const APP_TAG = "cotador-fretes";
@@ -83,6 +84,113 @@ export async function removeFromCart(ids: string[]): Promise<void> {
   for (const id of ids) {
     await meRequest("DELETE", `${CART_PATH}/${encodeURIComponent(id)}`).catch(() => undefined);
   }
+}
+
+const balanceSchema = z.looseObject({ balance: z.coerce.number() });
+
+/** Money available in the Melhor Envio wallet. */
+export async function walletBalance(): Promise<number> {
+  const response = await meRequest("GET", "/api/v2/me/balance", undefined, { timeoutMessage: NO_ANSWER });
+  if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+  const parsed = balanceSchema.safeParse(response.body);
+  if (!parsed.success) throw new QuoteError(502, "Resposta inesperada do Melhor Envio ao consultar o saldo.");
+  return parsed.data.balance;
+}
+
+const cartPageSchema = z.looseObject({
+  data: z.array(z.looseObject({ id: z.string(), price: z.coerce.number() })),
+  last_page: z.coerce.number().optional(),
+});
+const MAX_CART_PAGES = 10;
+
+/**
+ * Sum of the cart prices of these orders, read from Melhor Envio (never from the browser).
+ * Throws 409 when any of them is no longer waiting in the cart.
+ */
+export async function cartTotal(ids: string[]): Promise<number> {
+  const prices = new Map<string, number>();
+  for (let page = 1; page <= MAX_CART_PAGES; page++) {
+    const response = await meRequest("GET", `${CART_PATH}?page=${page}`, undefined, { timeoutMessage: NO_ANSWER });
+    if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+    const parsed = cartPageSchema.safeParse(response.body);
+    if (!parsed.success) throw new QuoteError(502, "Resposta inesperada do Melhor Envio ao ler o carrinho.");
+    for (const item of parsed.data.data) prices.set(item.id, item.price);
+    if (ids.every((id) => prices.has(id)) || page >= (parsed.data.last_page ?? 1)) break;
+  }
+  if (!ids.every((id) => prices.has(id))) {
+    throw new QuoteError(409, "Este envio não está mais aguardando pagamento. Confira na tela Envios.");
+  }
+  return round2(ids.reduce((sum, id) => sum + (prices.get(id) ?? 0), 0));
+}
+
+export type PixCharge = { paymentId: string; amount: number; qrCodeUrl: string; copyPaste: string; expiresAt?: string };
+
+const pixResponseSchema = z.looseObject({
+  payment: z.looseObject({
+    id: z.string(),
+    link: z.string().nullish(),
+    response: z
+      .looseObject({
+        data_response: z
+          .looseObject({
+            transaction: z.looseObject({ max_days_to_keep_waiting_payment: z.string().nullish() }).nullish(),
+          })
+          .nullish(),
+      })
+      .nullish(),
+  }),
+  redirect: z.string().nullish(),
+  digitable: z.string().nullish(),
+});
+
+/**
+ * Tops the wallet up by PIX with exactly what these orders are missing (decision D2).
+ * Returns { amount: 0 } when the balance already covers them. Only what the screen needs
+ * is returned: the gateway response also carries the account holder's name and CPF.
+ */
+export async function createPixForOrders(ids: string[]): Promise<PixCharge | { amount: 0 }> {
+  const total = await cartTotal(ids);
+  const amount = pixTopUpFor(total, await walletBalance());
+  if (amount === 0) return { amount: 0 };
+
+  const response = await meRequest(
+    "POST",
+    "/api/v2/me/balance",
+    { gateway: "yapay-transparente", slug: "pix", value: amount.toFixed(2) },
+    { timeoutMessage: NO_ANSWER },
+  );
+  if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+  const parsed = pixResponseSchema.safeParse(response.body);
+  const qrCodeUrl = parsed.success ? (parsed.data.payment.link ?? parsed.data.redirect) : null;
+  const copyPaste = parsed.success ? parsed.data.digitable : null;
+  if (!parsed.success || !qrCodeUrl || !copyPaste) {
+    throw new QuoteError(502, "O Melhor Envio não devolveu o QR Code do PIX. Tente novamente.");
+  }
+  const expiresAt = parsed.data.payment.response?.data_response?.transaction?.max_days_to_keep_waiting_payment;
+  return {
+    paymentId: parsed.data.payment.id,
+    amount,
+    qrCodeUrl,
+    copyPaste,
+    ...(expiresAt ? { expiresAt } : {}),
+  };
+}
+
+export type PixStatus = "pending" | "paid" | "failed";
+
+const PAID = new Set(["authorized", "paid", "approved", "completed", "released"]);
+const FAILED = new Set(["canceled", "cancelled", "unauthorized", "expired", "chargeback", "refused"]);
+
+/** Status of a PIX top-up (undocumented GET /api/v2/me/payments/{id}, confirmed in production). */
+export async function pixStatus(paymentId: string): Promise<PixStatus> {
+  const response = await meRequest("GET", `/api/v2/me/payments/${encodeURIComponent(paymentId)}`, undefined, {
+    timeoutMessage: NO_ANSWER,
+  });
+  if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+  const status = String((response.body as { status?: unknown } | null)?.status ?? "").toLowerCase();
+  if (PAID.has(status)) return "paid";
+  if (FAILED.has(status)) return "failed";
+  return "pending";
 }
 
 export type AgencyOption = { id: number; name: string; address: string; preferred: boolean };

@@ -3,7 +3,15 @@ import { fakeMelhorEnvio, fixture, jsonResponse } from "@/test/meFetch";
 import { TEST_SENDERS, TEST_SENDERS_JSON } from "@/test/senders";
 import type { ContractRequest } from "./recipient";
 import { SAME_DOCUMENT_MESSAGE } from "./recipient";
-import { APP_TAG, addToCart, listAgencies, removeFromCart } from "./shipments";
+import {
+  APP_TAG,
+  addToCart,
+  createPixForOrders,
+  listAgencies,
+  pixStatus,
+  removeFromCart,
+  walletBalance,
+} from "./shipments";
 
 const cartPac = fixture<{ id: string; price: number }>("cart-pac");
 
@@ -177,5 +185,88 @@ describe("listAgencies", () => {
     expect(calls[0].path).toBe("/api/v2/me/shipment/agencies?company=9&state=RS");
     expect(list.map((a) => a.id)).toEqual([5677, 2, 1]);
     expect(list[0]).toEqual({ id: 5677, name: "QNS02", address: "Rua QNS02, 1 - Canoas", preferred: true });
+  });
+});
+
+describe("wallet and PIX", () => {
+  const cartList = fixture<{ data: { id: string; price: number }[] }>("cart-list");
+  const [orderA, orderB] = cartList.data.map((order) => order.id);
+  const pixCreated = fixture("pix-create");
+
+  const walletRoutes = (balance: number) => [
+    { method: "GET", path: /\/api\/v2\/me\/balance$/, reply: () => jsonResponse(200, { balance, reserved: 0, debts: 0 }) },
+    { method: "GET", path: /\/api\/v2\/me\/cart\?page=1$/, reply: () => jsonResponse(200, { ...cartList, last_page: 1 }) },
+    { method: "POST", path: /\/api\/v2\/me\/balance$/, reply: () => jsonResponse(200, pixCreated) },
+  ];
+
+  test("walletBalance reads the available balance", async () => {
+    fakeMelhorEnvio(walletRoutes(42.5));
+    expect(await walletBalance()).toBe(42.5);
+  });
+
+  test("with an empty wallet, the PIX covers the orders' cart prices", async () => {
+    const { calls } = fakeMelhorEnvio(walletRoutes(0));
+    const charge = await createPixForOrders([orderA, orderB]);
+
+    const topUp = calls.find((c) => c.method === "POST");
+    expect(topUp?.body).toEqual({ gateway: "yapay-transparente", slug: "pix", value: "137.66" });
+    expect(charge).toEqual({
+      paymentId: "a2db3a3b-0000-4000-8000-000000000001",
+      amount: 137.66,
+      qrCodeUrl: "https://example.com/qrcode-ficticio.svg",
+      copyPaste: "00020101021226770014BR.GOV.BCB.PIX-FICTICIO6304ABCD",
+      expiresAt: "2026-09-29T16:43:06",
+    });
+  });
+
+  test("the PIX only covers what the balance is missing", async () => {
+    const { calls } = fakeMelhorEnvio(walletRoutes(20.1));
+    await createPixForOrders([orderA, orderB]);
+    expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ value: "117.56" });
+  });
+
+  test("no PIX is created when the balance already covers the orders", async () => {
+    const { calls } = fakeMelhorEnvio(walletRoutes(500));
+    expect(await createPixForOrders([orderA])).toEqual({ amount: 0 });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  test("refuses to charge for orders that are no longer waiting in the cart", async () => {
+    const { calls } = fakeMelhorEnvio(walletRoutes(0));
+    await expect(createPixForOrders([orderA, "00000000-0000-4000-8000-000000000000"])).rejects.toMatchObject({
+      status: 409,
+      message: "Este envio não está mais aguardando pagamento. Confira na tela Envios.",
+    });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  test("looks through every page of the cart", async () => {
+    const { calls } = fakeMelhorEnvio([
+      { method: "GET", path: /\/balance$/, reply: () => jsonResponse(200, { balance: 0 }) },
+      {
+        method: "GET",
+        path: /\/cart\?page=1$/,
+        reply: () => jsonResponse(200, { data: [cartList.data[0]], current_page: 1, last_page: 2 }),
+      },
+      {
+        method: "GET",
+        path: /\/cart\?page=2$/,
+        reply: () => jsonResponse(200, { data: [cartList.data[1]], current_page: 2, last_page: 2 }),
+      },
+      { method: "POST", path: /\/balance$/, reply: () => jsonResponse(200, pixCreated) },
+    ]);
+    await createPixForOrders([orderA, orderB]);
+    expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ value: "137.66" });
+  });
+
+  test("pixStatus tells pending, paid and failed apart", async () => {
+    const statuses = ["pending", "authorized", "paid", "canceled", "unauthorized", "something-new"];
+    let n = 0;
+    fakeMelhorEnvio([
+      { method: "GET", path: /\/api\/v2\/me\/payments\//, reply: () => jsonResponse(200, { status: statuses[n++] }) },
+    ]);
+    const results = [];
+    for (let i = 0; i < statuses.length; i++) results.push(await pixStatus("a2db3a3b-0000-4000-8000-000000000001"));
+    expect(results).toEqual(["pending", "paid", "paid", "failed", "failed", "pending"]);
   });
 });
