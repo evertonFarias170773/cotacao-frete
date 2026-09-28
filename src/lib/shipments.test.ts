@@ -12,6 +12,8 @@ import {
   labelsStatus,
   payOrders,
   listAgencies,
+  listCart,
+  listShipments,
   pixStatus,
   removeFromCart,
   walletBalance,
@@ -322,6 +324,15 @@ describe("payOrders", () => {
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
+  test("retrying after payment works when the cart is empty (the API answers 204)", async () => {
+    const { calls } = fakeMelhorEnvio([
+      { method: "GET", path: /\/cart\?page=1$/, reply: () => jsonResponse(204, null) },
+      { method: "GET", path: /\/orders\/[\w-]+$/, reply: () => jsonResponse(200, paidOrder) },
+    ]);
+    expect(await payOrders([paidOrder.id])).toEqual({ status: "paid" });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
   test("an order that is neither in the cart nor paid cannot be paid", async () => {
     fakeMelhorEnvio([
       { method: "GET", path: /\/balance$/, reply: () => jsonResponse(200, { balance: 500 }) },
@@ -439,5 +450,70 @@ describe("labelFile", () => {
   test("refuses a file address that is not https", async () => {
     fakeServers(() => jsonResponse(200, "http://inseguro.example/etiqueta.pdf"));
     await expect(labelFile(ORDER)).rejects.toMatchObject({ status: 502 });
+  });
+});
+
+describe("shipment listings", () => {
+  const list = fixture<{ data: Record<string, unknown>[] }>("orders-list");
+
+  test("lists orders with what the screen needs, forwarding page and status", async () => {
+    const { calls } = fakeMelhorEnvio([
+      {
+        method: "GET",
+        path: /\/api\/v2\/me\/orders\?/,
+        reply: () =>
+          jsonResponse(200, {
+            ...list,
+            current_page: 2,
+            last_page: 3,
+            total: 25,
+            data: [{ ...list.data[0], tags: [{ tag: APP_TAG, url: null }] }],
+          }),
+      },
+    ]);
+    const result = await listShipments({ page: 2, status: "released" });
+
+    expect(calls[0].path).toBe("/api/v2/me/orders?page=2&status=released");
+    expect(result).toMatchObject({ page: 2, lastPage: 3, total: 25 });
+    expect(result.items[0]).toEqual({
+      id: list.data[0].id,
+      protocol: list.data[0].protocol,
+      status: "released",
+      service: "Correios · PAC",
+      price: 68.83,
+      recipient: "Cliente Ficticio",
+      destination: "Sao Paulo/SP",
+      tracking: null,
+      createdAt: "2026-09-28 19:37:36",
+      paid: true,
+      generated: false,
+      fromApp: true,
+    });
+  });
+
+  test("without a status, lists everything", async () => {
+    const { calls } = fakeMelhorEnvio([
+      { method: "GET", path: /\/orders\?/, reply: () => jsonResponse(200, { ...list, current_page: 1, last_page: 1, total: 3 }) },
+    ]);
+    await listShipments({ page: 1 });
+    expect(calls[0].path).toBe("/api/v2/me/orders?page=1");
+  });
+
+  test("a filter with no results (the API answers 204 with no body) is an empty page", async () => {
+    fakeMelhorEnvio([{ method: "GET", path: /\/orders\?/, reply: () => jsonResponse(204, null) }]);
+    expect(await listShipments({ page: 1, status: "generated" })).toEqual({ items: [], page: 1, lastPage: 1, total: 0 });
+  });
+
+  test("an empty cart (204) lists nothing", async () => {
+    fakeMelhorEnvio([{ method: "GET", path: /\/cart\?page=1$/, reply: () => jsonResponse(204, null) }]);
+    expect(await listCart()).toEqual([]);
+  });
+
+  test("the cart lists what is waiting for payment", async () => {
+    const cart = fixture<{ data: Record<string, unknown>[] }>("cart-list");
+    fakeMelhorEnvio([{ method: "GET", path: /\/cart\?page=1$/, reply: () => jsonResponse(200, cart) }]);
+    const items = await listCart();
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ status: "pending", paid: false, price: 68.83, service: "Correios · PAC" });
   });
 });

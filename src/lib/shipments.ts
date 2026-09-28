@@ -121,6 +121,8 @@ async function cartPrices(ids: string[]): Promise<Map<string, number>> {
   for (let page = 1; page <= MAX_CART_PAGES; page++) {
     const response = await meRequest("GET", `${CART_PATH}?page=${page}`, undefined, { timeoutMessage: NO_ANSWER });
     if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+    // An empty cart comes back as 204 with no body.
+    if (response.status === 204 || response.body === null) break;
     const parsed = cartPageSchema.safeParse(response.body);
     if (!parsed.success) throw new QuoteError(502, "Resposta inesperada do Melhor Envio ao ler o carrinho.");
     for (const item of parsed.data.data) prices.set(item.id, item.price);
@@ -322,6 +324,96 @@ export async function labelFile(orderId: string): Promise<LabelFile> {
   }
   if (!file.ok) throw new QuoteError(502, "Não foi possível baixar a etiqueta. Tente novamente.");
   return { bytes: await file.arrayBuffer(), contentType: file.headers.get("content-type") ?? "application/pdf" };
+}
+
+/** Order statuses the listing can be filtered by (Melhor Envio values). */
+export const SHIPMENT_STATUSES = ["released", "generated", "posted", "delivered", "canceled", "undelivered"] as const;
+export type ShipmentStatusFilter = (typeof SHIPMENT_STATUSES)[number];
+
+export type ShipmentSummary = {
+  id: string;
+  protocol: string;
+  status: string;
+  service: string;
+  price: number;
+  recipient: string;
+  destination: string;
+  tracking: string | null;
+  createdAt: string;
+  paid: boolean;
+  generated: boolean;
+  /** Created by this app (tagged), as opposed to the Melhor Envio panel. */
+  fromApp: boolean;
+};
+
+const listedOrderSchema = z.looseObject({
+  id: z.string(),
+  protocol: z.string().nullish(),
+  status: z.string().nullish(),
+  price: z.coerce.number().nullish(),
+  tracking: z.string().nullish(),
+  self_tracking: z.string().nullish(),
+  created_at: z.string().nullish(),
+  paid_at: z.string().nullish(),
+  generated_at: z.string().nullish(),
+  to: z.looseObject({ name: z.string().nullish(), city: z.string().nullish(), state_abbr: z.string().nullish() }).nullish(),
+  service: z
+    .looseObject({ name: z.string().nullish(), company: z.looseObject({ name: z.string().nullish() }).nullish() })
+    .nullish(),
+  tags: z.array(z.looseObject({ tag: z.string().nullish() })).nullish(),
+});
+
+const listPageSchema = z.looseObject({
+  data: z.array(listedOrderSchema),
+  current_page: z.coerce.number().optional(),
+  last_page: z.coerce.number().optional(),
+  total: z.coerce.number().optional(),
+});
+
+function toSummary(order: z.output<typeof listedOrderSchema>): ShipmentSummary {
+  const status = order.status ?? "";
+  return {
+    id: order.id,
+    protocol: order.protocol ?? "",
+    status,
+    service: [order.service?.company?.name, order.service?.name].filter(Boolean).join(" · "),
+    price: order.price ?? 0,
+    recipient: order.to?.name ?? "",
+    destination: [order.to?.city, order.to?.state_abbr].filter(Boolean).join("/"),
+    tracking: order.tracking ?? order.self_tracking ?? null,
+    createdAt: order.created_at ?? "",
+    paid: Boolean(order.paid_at),
+    generated: Boolean(order.generated_at) || GENERATED_STATUSES.has(status),
+    fromApp: Boolean(order.tags?.some((tag) => tag.tag === APP_TAG)),
+  };
+}
+
+async function readListPage(path: string) {
+  const response = await meRequest("GET", path, undefined, { timeoutMessage: NO_ANSWER });
+  if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+  // No results: the API answers 204 with no body instead of an empty page.
+  if (response.status === 204 || response.body === null) return { data: [], current_page: 1, last_page: 1, total: 0 };
+  const parsed = listPageSchema.safeParse(response.body);
+  if (!parsed.success) throw new QuoteError(502, "Resposta inesperada do Melhor Envio ao listar os envios.");
+  return parsed.data;
+}
+
+/** The account's shipments, newest first, ten per page like the API. */
+export async function listShipments({ page, status }: { page: number; status?: ShipmentStatusFilter }) {
+  const query = `page=${page}${status ? `&status=${status}` : ""}`;
+  const data = await readListPage(`/api/v2/me/orders?${query}`);
+  return {
+    items: data.data.map(toSummary),
+    page: data.current_page ?? page,
+    lastPage: data.last_page ?? page,
+    total: data.total ?? data.data.length,
+  };
+}
+
+/** What is still in the cart, waiting for payment. */
+export async function listCart(): Promise<ShipmentSummary[]> {
+  const data = await readListPage(`${CART_PATH}?page=1`);
+  return data.data.map(toSummary);
 }
 
 export type AgencyOption = { id: number; name: string; address: string; preferred: boolean };
