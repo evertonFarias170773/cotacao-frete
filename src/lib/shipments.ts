@@ -416,6 +416,27 @@ export async function listCart(): Promise<ShipmentSummary[]> {
   return data.data.map(toSummary);
 }
 
+/**
+ * Requests the cancellation of a paid label. It is asynchronous: the money returns to the
+ * wallet within 12 hours. Carriers refuse once they have the package.
+ */
+export async function cancelShipment(id: string): Promise<void> {
+  const response = await meRequest(
+    "POST",
+    "/api/v2/me/shipment/cancel",
+    { order: { id, reason_id: "2", description: "Cancelado pela equipe no Cotador de Fretes." } },
+    { timeoutMessage: NO_ANSWER },
+  );
+  if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+  const entry = (response.body as Record<string, { canceled?: unknown } | undefined> | null)?.[id];
+  if (!entry || entry.canceled !== true) {
+    throw new QuoteError(
+      422,
+      "O cancelamento não foi aceito. Se a transportadora já recebeu o pacote, não é mais possível cancelar.",
+    );
+  }
+}
+
 export type AgencyOption = { id: number; name: string; address: string; preferred: boolean };
 
 const agencySchema = z.looseObject({

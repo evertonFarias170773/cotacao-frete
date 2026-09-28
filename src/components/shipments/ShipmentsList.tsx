@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Loader2, Printer, RotateCw, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Printer, RotateCw, Trash2, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
 import { callApi } from "@/lib/apiClient";
+import { formatCurrency } from "@/lib/format";
 import { loadPendingPayment, type PendingPayment } from "@/lib/storage";
 import { LabelPanel } from "../payment/LabelPanel";
 import { PaymentPanel } from "../payment/PaymentPanel";
@@ -17,6 +18,9 @@ const FILTERS: { value: string; label: string }[] = [
   { value: "delivered", label: "Entregues" },
   { value: "canceled", label: "Cancelados" },
 ];
+
+/** Paid labels the carrier has not received yet can still be cancelled. */
+const CANCELLABLE = new Set(["released", "generated"]);
 
 type Page = { items: ShipmentSummary[]; page: number; lastPage: number; total: number };
 type Action = { kind: "pay" | "label"; id: string } | null;
@@ -38,6 +42,8 @@ export function ShipmentsList() {
   const [error, setError] = useState<string | null>(null);
   const [action, setAction] = useState<Action>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState<Set<string>>(() => new Set());
   const [reloadKey, setReloadKey] = useState(0);
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
@@ -62,6 +68,21 @@ export function ShipmentsList() {
       active = false;
     };
   }, [page, status, reloadKey]);
+
+  async function cancel(item: ShipmentSummary) {
+    const question = `Cancelar a etiqueta de ${formatCurrency(item.price)}? O valor volta para a carteira em até 12 horas.`;
+    if (!window.confirm(question)) return;
+    setCancelling(item.id);
+    setError(null);
+    try {
+      await callApi(`/api/shipments/${item.id}/cancel`, { method: "POST" });
+      setCancelled((current) => new Set(current).add(item.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível cancelar.");
+    } finally {
+      setCancelling(null);
+    }
+  }
 
   async function removeFromCart(id: string) {
     setRemoving(id);
@@ -192,15 +213,35 @@ export function ShipmentsList() {
               <ShipmentRow key={item.id} shipment={item}>
                 {action?.kind === "label" && action.id === item.id ? (
                   <LabelPanel orders={[item.id]} />
-                ) : item.generated && item.status !== "canceled" ? (
-                  <a href={`/api/shipments/labels/print?order=${item.id}`} target="_blank" rel="noopener" className={actionButton}>
-                    <Printer className="h-4 w-4" aria-hidden /> Imprimir
-                  </a>
-                ) : item.paid && item.status === "released" ? (
-                  <button type="button" className={actionButton} onClick={() => setAction({ kind: "label", id: item.id })}>
-                    Gerar etiqueta
-                  </button>
-                ) : null}
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {item.generated && item.status !== "canceled" ? (
+                      <a href={`/api/shipments/labels/print?order=${item.id}`} target="_blank" rel="noopener" className={actionButton}>
+                        <Printer className="h-4 w-4" aria-hidden /> Imprimir
+                      </a>
+                    ) : item.paid && item.status === "released" ? (
+                      <button type="button" className={actionButton} onClick={() => setAction({ kind: "label", id: item.id })}>
+                        Gerar etiqueta
+                      </button>
+                    ) : null}
+                    {CANCELLABLE.has(item.status) && (
+                      <button
+                        type="button"
+                        className={actionButton}
+                        onClick={() => void cancel(item)}
+                        disabled={cancelling === item.id}
+                      >
+                        {cancelling === item.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <XCircle className="h-4 w-4" aria-hidden />}
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                )}
+                {cancelled.has(item.id) && (
+                  <p className="text-xs text-green-700 dark:text-green-400">
+                    Cancelamento pedido. O valor volta para a carteira em até 12 horas.
+                  </p>
+                )}
               </ShipmentRow>
             ))}
           </ul>

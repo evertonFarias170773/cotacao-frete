@@ -6,6 +6,7 @@ import { SAME_DOCUMENT_MESSAGE } from "./recipient";
 import {
   APP_TAG,
   addToCart,
+  cancelShipment,
   createPixForOrders,
   generateLabels,
   labelFile,
@@ -515,5 +516,35 @@ describe("shipment listings", () => {
     const items = await listCart();
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({ status: "pending", paid: false, price: 68.83, service: "Correios · PAC" });
+  });
+});
+
+describe("cancelShipment", () => {
+  const cancel = fixture<Record<string, unknown>>("cancel");
+  const ORDER = Object.keys(cancel).find((key) => key !== "key") ?? "";
+
+  test("asks for cancellation with the integration reason and reports it as requested", async () => {
+    const { calls } = fakeMelhorEnvio([{ method: "POST", path: /\/shipment\/cancel$/, reply: () => jsonResponse(200, cancel) }]);
+    await expect(cancelShipment(ORDER)).resolves.toBeUndefined();
+    expect(calls[0].body).toEqual({
+      order: { id: ORDER, reason_id: "2", description: "Cancelado pela equipe no Cotador de Fretes." },
+    });
+  });
+
+  test("a refused cancellation explains why", async () => {
+    fakeMelhorEnvio([
+      { method: "POST", path: /\/shipment\/cancel$/, reply: () => jsonResponse(200, { [ORDER]: { canceled: false } }) },
+    ]);
+    await expect(cancelShipment(ORDER)).rejects.toMatchObject({
+      status: 422,
+      message: "O cancelamento não foi aceito. Se a transportadora já recebeu o pacote, não é mais possível cancelar.",
+    });
+  });
+
+  test("an API refusal carries its own reason", async () => {
+    fakeMelhorEnvio([
+      { method: "POST", path: /\/shipment\/cancel$/, reply: () => jsonResponse(422, { error: "Envio já postado." }) },
+    ]);
+    await expect(cancelShipment(ORDER)).rejects.toMatchObject({ status: 422, message: "Envio já postado." });
   });
 });
