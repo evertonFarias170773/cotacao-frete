@@ -123,6 +123,26 @@ describe("addToCart", () => {
     expect(deleted.some((url) => url.endsWith("/cart/order-1"))).toBe(true);
   });
 
+  test("warns when the NF-e was issued by another CNPJ than the origin's sender", async () => {
+    fakeMelhorEnvio([{ method: "POST", path: /\/cart$/, reply: () => jsonResponse(201, cartPac) }]);
+    const single = { ...contract.quote, volumes: [{ ...contract.quote.volumes[0], quantity: 1 }] };
+    const other = await addToCart({
+      ...contract,
+      quote: single,
+      content: { kind: "invoice", key: "43260911222333000181550010000543211876543211" },
+    });
+    expect(other.warnings).toEqual([
+      "A NF-e foi emitida pelo CNPJ 11.222.333/0001-81, diferente do CNPJ do remetente desta origem. Confira se é a nota certa.",
+    ]);
+
+    const own = await addToCart({
+      ...contract,
+      quote: single,
+      content: { kind: "invoice", key: "43260946867029000176550010000123451123456780" },
+    });
+    expect(own.warnings).toEqual([]);
+  });
+
   test("Total Express between units with the same CNPJ is refused before calling the API", async () => {
     const { calls } = fakeMelhorEnvio([]);
     const toOwnUnit: ContractRequest = {

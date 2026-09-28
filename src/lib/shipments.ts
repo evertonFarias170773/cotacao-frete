@@ -6,6 +6,8 @@ import { SenderConfigError, getSender } from "@/config/senders";
 import { CartBuildError, buildCartItems, type Party } from "./cart";
 import { QuoteError, mapApiError } from "./errors";
 import { meRequest } from "./melhorEnvio";
+import { normalizeDocument } from "./documents";
+import { emitterDocumentFromKey } from "./nfe";
 import { contractBlockReason, toRecipientParty, type ContractRequest } from "./recipient";
 import { pixTopUpFor } from "./wallet";
 
@@ -19,7 +21,21 @@ const isOk = (status: number) => status >= 200 && status < 300;
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
 export type CartOrder = { id: string; protocol: string; price: number };
-export type CartResult = { orders: CartOrder[]; total: number };
+export type CartResult = { orders: CartOrder[]; total: number; warnings: string[] };
+
+const formatCnpj = (value: string) =>
+  value.length === 14 ? `${value.slice(0, 2)}.${value.slice(2, 5)}.${value.slice(5, 8)}/${value.slice(8, 12)}-${value.slice(12)}` : value;
+
+/** An NF-e issued by someone else than the origin's sender is probably the wrong invoice. */
+function invoiceWarnings(contract: ContractRequest, sender: Party): string[] {
+  if (contract.content.kind !== "invoice") return [];
+  const issuer = emitterDocumentFromKey(contract.content.key);
+  const senderDocument = normalizeDocument(sender.companyDocument ?? sender.document ?? "");
+  if (!issuer || issuer === senderDocument) return [];
+  return [
+    `A NF-e foi emitida pelo CNPJ ${formatCnpj(issuer)}, diferente do CNPJ do remetente desta origem. Confira se é a nota certa.`,
+  ];
+}
 
 const cartOrderSchema = z.looseObject({
   id: z.string().min(1),
@@ -76,7 +92,11 @@ export async function addToCart(contract: ContractRequest): Promise<CartResult> 
     throw error;
   }
 
-  return { orders: created, total: round2(created.reduce((sum, order) => sum + order.price, 0)) };
+  return {
+    orders: created,
+    total: round2(created.reduce((sum, order) => sum + order.price, 0)),
+    warnings: invoiceWarnings(contract, sender),
+  };
 }
 
 /** Removes cart items; ones already gone or already paid are ignored. */
