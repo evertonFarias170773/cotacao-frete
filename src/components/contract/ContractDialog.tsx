@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { callApi } from "@/lib/apiClient";
 import type { QuoteRequest } from "@/lib/schemas";
 import type { QuoteOption } from "@/lib/types";
+import { LabelPanel } from "../payment/LabelPanel";
 import { PaymentPanel } from "../payment/PaymentPanel";
 import { ContentStep } from "./ContentStep";
 import { RecipientStep } from "./RecipientStep";
@@ -192,8 +193,10 @@ export function ContractDialog({ option, quote, onClose }: Props) {
             )}
           </StepShell>
         )}
-        {step === "label" && (
-          <p className="px-5 py-8 text-center text-sm text-zinc-500">Pago. A geração da etiqueta entra na próxima tarefa.</p>
+        {step === "label" && cart && (
+          <StepShell next={{ label: "Concluir", onClick: onClose }}>
+            <LabelPanel orders={cart.orders.map((order) => order.id)} />
+          </StepShell>
         )}
       </div>
     </div>

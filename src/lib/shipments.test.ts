@@ -7,6 +7,8 @@ import {
   APP_TAG,
   addToCart,
   createPixForOrders,
+  generateLabels,
+  labelsStatus,
   payOrders,
   listAgencies,
   pixStatus,
@@ -331,5 +333,57 @@ describe("payOrders", () => {
   test("other checkout refusals carry the API's reason", async () => {
     fakeMelhorEnvio(routes({ balance: 500, checkoutReply: () => jsonResponse(422, { error: "Serviço indisponível." }) }));
     await expect(payOrders([orderA, orderB])).rejects.toMatchObject({ status: 422, message: "Serviço indisponível." });
+  });
+});
+
+describe("labels", () => {
+  const A = "a2db3844-f23e-4367-b6cf-02fb76413df5";
+  const B = "a2db3845-d38f-4fbd-a233-26d4314c7810";
+
+  test("generation reports each order, including partial failures", async () => {
+    const { calls } = fakeMelhorEnvio([
+      {
+        method: "POST",
+        path: /\/shipment\/generate$/,
+        reply: () =>
+          jsonResponse(200, {
+            generate_key: "k",
+            [A]: { status: true, message: "Envio encaminhado para geração" },
+            [B]: { status: false, message: "Agência inválida para o serviço." },
+          }),
+      },
+    ]);
+    expect(await generateLabels([A, B])).toEqual([
+      { id: A, ok: true, message: "Envio encaminhado para geração" },
+      { id: B, ok: false, message: "Agência inválida para o serviço." },
+    ]);
+    expect(calls[0].body).toEqual({ orders: [A, B] });
+  });
+
+  test("an order missing from the generation answer is reported as failed", async () => {
+    fakeMelhorEnvio([
+      { method: "POST", path: /\/shipment\/generate$/, reply: () => jsonResponse(200, { [A]: { status: true, message: "ok" } }) },
+    ]);
+    expect((await generateLabels([A, B]))[1]).toEqual({ id: B, ok: false, message: "A transportadora não respondeu por este envio." });
+  });
+
+  test("status tells generated labels apart and exposes the tracking code", async () => {
+    fakeMelhorEnvio([
+      {
+        method: "GET",
+        path: /\/orders\/[\w-]+$/,
+        reply: (_body, n) =>
+          jsonResponse(
+            200,
+            n === 1
+              ? { id: A, status: "generated", generated_at: "2026-09-28 20:00:00", tracking: "ME2600000001BR" }
+              : { id: B, status: "released", generated_at: null, tracking: null, self_tracking: null },
+          ),
+      },
+    ]);
+    expect(await labelsStatus([A, B])).toEqual([
+      { id: A, status: "generated", generated: true, tracking: "ME2600000001BR" },
+      { id: B, status: "released", generated: false, tracking: null },
+    ]);
   });
 });

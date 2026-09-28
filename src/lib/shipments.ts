@@ -134,6 +134,7 @@ const orderSchema = z.looseObject({
   status: z.string().nullish(),
   paid_at: z.string().nullish(),
   tracking: z.string().nullish(),
+  self_tracking: z.string().nullish(),
   generated_at: z.string().nullish(),
 });
 
@@ -250,6 +251,39 @@ export async function pixStatus(paymentId: string): Promise<PixStatus> {
   if (PAID.has(status)) return "paid";
   if (FAILED.has(status)) return "failed";
   return "pending";
+}
+
+export type GenerateResult = { id: string; ok: boolean; message: string };
+
+/**
+ * Asks the carriers to generate the labels. Generation is asynchronous: an ok result means
+ * "sent for generation"; labelsStatus tells when each label is actually ready.
+ */
+export async function generateLabels(ids: string[]): Promise<GenerateResult[]> {
+  const response = await meRequest("POST", "/api/v2/me/shipment/generate", { orders: ids }, { timeoutMessage: NO_ANSWER });
+  if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+  const body = (response.body ?? {}) as Record<string, { status?: unknown; message?: unknown } | undefined>;
+  return ids.map((id) => {
+    const entry = body[id];
+    if (!entry || typeof entry !== "object") {
+      return { id, ok: false, message: "A transportadora não respondeu por este envio." };
+    }
+    return { id, ok: entry.status === true, message: typeof entry.message === "string" ? entry.message : "" };
+  });
+}
+
+export type LabelStatus = { id: string; status: string; generated: boolean; tracking: string | null };
+
+const GENERATED_STATUSES = new Set(["generated", "posted", "received", "delivered", "undelivered"]);
+
+export async function labelsStatus(ids: string[]): Promise<LabelStatus[]> {
+  const orders = await Promise.all(ids.map((id) => getOrder(id)));
+  return orders.map((order) => ({
+    id: order.id,
+    status: order.status ?? "",
+    generated: Boolean(order.generated_at) || GENERATED_STATUSES.has(order.status ?? ""),
+    tracking: order.tracking ?? order.self_tracking ?? null,
+  }));
 }
 
 export type AgencyOption = { id: number; name: string; address: string; preferred: boolean };

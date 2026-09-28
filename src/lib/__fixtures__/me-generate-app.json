@@ -1,0 +1,15 @@
+{
+  "request": {
+    "orders": [
+      "a2db4cba-2323-4ab1-b5ec-58fcfe0489d8"
+    ]
+  },
+  "status": 200,
+  "body": {
+    "generate_key": "a2db4f37-e65f-41c0-a9ee-3166eab64410",
+    "a2db4cba-2323-4ab1-b5ec-58fcfe0489d8": {
+      "message": "Envio encaminhado para geração",
+      "status": true
+    }
+  }
+}
