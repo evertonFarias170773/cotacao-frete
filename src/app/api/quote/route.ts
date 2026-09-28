@@ -1,8 +1,12 @@
 import { QuoteError } from "@/lib/errors";
 import { quoteShipment } from "@/lib/melhorEnvio";
+import { requireSession } from "@/lib/requireSession";
 import { quoteRequestSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
+  const denied = await requireSession(request);
+  if (denied) return denied;
+
   const json: unknown = await request.json().catch(() => null);
   if (json === null || typeof json !== "object") {
     return Response.json({ error: "Corpo da requisição inválido." }, { status: 400 });

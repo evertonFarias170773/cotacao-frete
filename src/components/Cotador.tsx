@@ -30,6 +30,7 @@ import {
   type HistoryEntry,
 } from "@/lib/storage";
 import type { QuoteResult } from "@/lib/types";
+import { AppHeader } from "./AppHeader";
 import { DestinationInput } from "./DestinationInput";
 import { HistoryList } from "./HistoryList";
 import { OriginSelector } from "./OriginSelector";
@@ -233,14 +234,17 @@ export function Cotador() {
           noValidate
           className="space-y-8"
         >
-          <header>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Cotador de Fretes
-            </h1>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Escolha a origem, informe o destino e os volumes para comparar as
-              transportadoras.
-            </p>
+          <header className="space-y-4">
+            <AppHeader current="cotar" />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Cotador de Fretes
+              </h1>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Escolha a origem, informe o destino e os volumes para comparar
+                as transportadoras.
+              </p>
+            </div>
           </header>
 
           <section>

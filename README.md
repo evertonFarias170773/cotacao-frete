@@ -19,6 +19,11 @@ Variáveis de ambiente (lidas **só no servidor**, nunca chegam ao navegador):
 | `MELHOR_ENVIO_TOKEN` | Token gerado no painel do Melhor Envio. Sandbox e produção usam tokens diferentes. |
 | `MELHOR_ENVIO_ENV` | `production` (padrão) ou `sandbox`. |
 | `MELHOR_ENVIO_USER_AGENT` | Exigido pela API: nome da aplicação + e-mail de contato técnico. |
+| `MELHOR_ENVIO_SANDBOX_TOKEN` | Token do sandbox, usado quando `MELHOR_ENVIO_ENV=sandbox`. |
+| `APP_PASSWORD` | Senha única da equipe, pedida na tela `/entrar`. |
+| `SESSION_SECRET` | Segredo que assina o cookie de sessão, com 32 caracteres ou mais. Sem ele o app nega todo acesso. |
+
+O app inteiro exige login com a senha da equipe. A sessão dura 12 horas e o botão Sair encerra antes.
 
 Origens fixas ficam em [src/config/origins.ts](src/config/origins.ts).
 

@@ -16,6 +16,13 @@ export async function requestQuote(payload: QuoteRequest): Promise<QuoteResult> 
     throw new Error(NETWORK_MESSAGE);
   }
 
+  if (response.status === 401) {
+    // Session expired: back to the login page, returning here afterwards.
+    // Plain module, no router here; a full navigation also lets the proxy re-check the cookie.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`/entrar?para=${encodeURIComponent(window.location.pathname)}`);
+  }
+
   const body = (await response.json().catch(() => null)) as { error?: string } | QuoteResult | null;
   if (!response.ok) {
     const message = body && "error" in body && typeof body.error === "string" ? body.error : null;
