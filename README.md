@@ -22,6 +22,9 @@ Variáveis de ambiente (lidas **só no servidor**, nunca chegam ao navegador):
 | `MELHOR_ENVIO_SANDBOX_TOKEN` | Token do sandbox, usado quando `MELHOR_ENVIO_ENV=sandbox`. |
 | `APP_PASSWORD` | Senha única da equipe, pedida na tela `/entrar`. |
 | `SESSION_SECRET` | Segredo que assina o cookie de sessão, com 32 caracteres ou mais. Sem ele o app nega todo acesso. |
+| `SENDERS_JSON` | Dados completos do remetente de cada origem, em JSON de uma linha. Fica fora do código porque o repositório é público. Formato em `.env.example`. |
+
+O token precisa dos escopos de carrinho, compra, geração, impressão, cancelamento, saldo e envios, e não só `shipping-calculate`. A lista está no plano em `docs/superpowers/plans/`.
 
 O app inteiro exige login com a senha da equipe. A sessão dura 12 horas e o botão Sair encerra antes.
 
@@ -77,6 +80,30 @@ A impressão digital normaliza a forma de digitar, então `01018-020` e `0101802
 `9.45`, não disparam recálculo. Desfazer uma edição e voltar exatamente aos valores anteriores
 também não refaz a chamada: a lista que já estava em memória volta a ser válida. Ela também serve
 de identificador no histórico, para uma cotação repetida subir de posição em vez de duplicar.
+
+## Contratação, pagamento e etiqueta
+
+Em cada resultado da cotação, **Contratar este frete** abre uma tela em etapas:
+
+1. **Destinatário.** Nome, CPF ou CNPJ (inclusive o CNPJ alfanumérico), telefone e endereço. O endereço vem do CEP cotado pelo ViaCEP, e o CEP não muda sem nova cotação.
+2. **Conteúdo.** Declaração de conteúdo ou chave da NF-e modelo 55. Transportadoras que deixam o pacote numa agência (Jadlog, LATAM, Azul, Buslog, Total Express) mostram a agência padrão de cada origem, definida em `src/config/agencies.ts`, com opção de trocar.
+3. **Revisão.** O envio entra no carrinho do Melhor Envio e a tela mostra o preço confirmado por ele, com aviso se mudou em relação à cotação. Voltar ou fechar remove o item do carrinho.
+4. **Pagamento.** Com saldo suficiente na carteira, o pagamento é imediato. Sem saldo, o app gera um PIX só da diferença, espera a confirmação e conclui a compra sozinho. O valor do PIX é sempre calculado no servidor.
+5. **Etiqueta.** O app pede a geração, acompanha até ficar pronta e oferece **Imprimir etiqueta**. O PDF é baixado pelo servidor e entregue só a quem está logado, sem link público. Correios, Loggi e J&T geram uma etiqueta por volume.
+
+A tela **Envios** (`/envios`) lista os envios da conta, com filtro por status, e os itens do carrinho aguardando pagamento. Por ela também se retoma um PIX gerado antes de fechar a aba, se gera ou imprime etiqueta e se cancela uma etiqueta paga ainda não postada. O estorno do cancelamento volta para a carteira em até 12 horas.
+
+Pagar duas vezes os mesmos envios, por clique duplo ou nova tentativa, não cobra de novo.
+
+### Testando sem gastar
+
+Suba o servidor com o sandbox do Melhor Envio. Ele tem R$ 10.000,00 de saldo fictício, mas só simula Correios e Jadlog e não tem PIX:
+
+```bash
+MELHOR_ENVIO_ENV=sandbox npm run dev
+```
+
+O script `node scripts/spike-sandbox.mjs` percorre o fluxo inteiro da API no sandbox e regrava as respostas usadas como fixtures nos testes.
 
 ## Como funciona
 
