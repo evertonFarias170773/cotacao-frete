@@ -1,0 +1,14 @@
+{
+  "request": null,
+  "status": 200,
+  "body": {
+    "id": "a2db3a3b-0000-4000-8000-000000000001",
+    "protocol": "PAY-00000000000001",
+    "value": 1,
+    "status": "pending",
+    "authorized_at": null,
+    "unauthorized_at": null,
+    "canceled_at": null,
+    "link": "https://example.com/qrcode-ficticio.svg"
+  }
+}

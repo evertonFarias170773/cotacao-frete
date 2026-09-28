@@ -68,6 +68,21 @@ cotação ─▶ POST /api/v2/me/cart ─▶ POST /api/v2/me/shipment/checkout �
 - Os webhooks do Melhor Envio só avisam eventos de etiqueta (`order.created`, `order.released`, `order.generated`, `order.posted`, `order.delivered`, `order.cancelled` e outros). Não existe evento de pagamento de recarga. A confirmação do PIX terá de ser por consulta periódica.
 - **O sandbox não tem PIX.** Lá só existe o gateway Yapay, aprovado automaticamente após 5 minutos. O formato real da resposta do PIX só pode ser conhecido em produção, com uma recarga pequena.
 
+**Confirmado em produção em 28/09/2026 (Task 3), com uma recarga de R$ 1,00:**
+
+- `POST /api/v2/me/balance` com `{ "gateway": "yapay-transparente", "slug": "pix", "value": "1.00" }` responde 200 com `payment.id`, `payment.status: "pending"`, `payment.link` (imagem SVG do QR Code), `digitable` (código copia-e-cola) e `payment.gateway.min_value: 1`.
+- A validade vem em `payment.response.data_response.transaction.max_days_to_keep_waiting_payment`: cerca de 21 horas.
+- `payment.response` também traz nome e CPF do titular da conta. Nunca é repassado ao navegador.
+- **A confirmação é consultada em `GET /api/v2/me/payments/{id}`**, que devolve o `status`. Essa rota não está documentada, mas responde.
+- Pagar a etiqueta direto por gateway no checkout não foi testado. A decisão D2 (saldo primeiro, PIX da diferença) usa só a recarga.
+
+**Confirmado no sandbox em 28/09/2026 (Task 2):**
+
+- A geração da etiqueta é assíncrona. A API responde "Envio encaminhado para geração", e imprimir antes da geração terminar dá 422 `E-PRT-0011`.
+- Pagar os mesmos pedidos duas vezes responde **204 sem corpo**, e não o 422 da documentação. O saldo é debitado uma vez só.
+- O cancelamento também é assíncrono: `{ "<id>": { "canceled": true, "status": "pending" } }`.
+- O preço no carrinho bateu com a cotação: 2 itens de R$ 68,83 contra R$ 137,66 cotados.
+
 ### 1.3 O que cada transportadora exige
 
 Lista de serviços da sua conta (`GET /api/v2/me/shipment/services`), consultada em 28/09/2026:
@@ -83,7 +98,7 @@ Lista de serviços da sua conta (`GET /api/v2/me/shipment/services`), consultada
 | Buslog Rodoviário | sim | sim, com token do painel | sim |
 | Total Express Standard | só se o envio for comercial | sim (`options.agency_id`) | sim |
 
-Sem nota fiscal (declaração de conteúdo), o app fica restrito a Correios, Loggi, J&T e Total Express. Isso será confirmado no sandbox com a Jadlog, que é uma das duas transportadoras disponíveis lá.
+**Correção após o sandbox (Task 2):** a coluna "exige nota fiscal" vem da lista de serviços, mas não é regra rígida. A Jadlog aceitou declaração de conteúdo. O limite real é outro: **envio não comercial não pode ter seguro acima de R$ 1.000,00** (`E-CRT-0001`), e a chave de NF-e precisa ser do **modelo 55**. Como as regras variam por transportadora e a API explica o motivo quando recusa, o app não bloqueia serviços antecipadamente. Ele mostra a mensagem e a sugestão da API na etapa de revisão.
 
 Outras regras do carrinho:
 

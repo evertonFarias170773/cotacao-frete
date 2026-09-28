@@ -1,0 +1,82 @@
+{
+  "request": {
+    "gateway": "yapay-transparente",
+    "slug": "pix",
+    "value": "1.00"
+  },
+  "status": 200,
+  "body": {
+    "payment": {
+      "id": "a2db3a3b-0000-4000-8000-000000000001",
+      "protocol": "PAY-00000000000001",
+      "value": 1,
+      "status": "pending",
+      "redirect": null,
+      "response": {
+        "message_response": {
+          "message": "success"
+        },
+        "data_response": {
+          "transaction": {
+            "order_number": "PAY-00000000000001",
+            "status_id": 4,
+            "max_days_to_keep_waiting_payment": "2026-09-29T16:43:06",
+            "payment": {
+              "price_payment": "1.0",
+              "qrcode_path": "https://example.com/qrcode-ficticio.svg",
+              "qrcode_original_path": "00020101021226770014BR.GOV.BCB.PIX-FICTICIO6304ABCD",
+              "url_payment": "https://example.com/pix-ficticio"
+            },
+            "customer": "[omitido]"
+          }
+        }
+      },
+      "authorized_at": null,
+      "unauthorized_at": null,
+      "canceled_at": null,
+      "chargeback_at": null,
+      "created_at": "2026-09-28 19:43:05",
+      "updated_at": "2026-09-28 19:43:07",
+      "link": "https://example.com/qrcode-ficticio.svg",
+      "payment_gateway_id": null,
+      "gateway": {
+        "id": 9,
+        "slug": "yapay-transparente",
+        "name": "Vindi Transparente",
+        "status": "available",
+        "is_hidden": 0,
+        "min_value": 1,
+        "picture": "https://melhorenvio.s3-sa-east-1.amazonaws.com/payment-gateways/vindi.png",
+        "website": "https://www.yapay.com.br",
+        "is_new": 0
+      },
+      "method": null,
+      "transaction": {
+        "id": "a2db3a3b-0000-4000-8000-000000000002",
+        "protocol": "TRN-00000000000002",
+        "value": 1,
+        "type": "credit",
+        "status": "pending",
+        "description": "Inserção de crédito para uso no Melhor Envio (PAY-00000000000001)",
+        "authorized_at": null,
+        "unauthorized_at": null,
+        "reserved_at": null,
+        "canceled_at": null,
+        "created_at": "2026-09-28 19:43:05",
+        "description_internal": null,
+        "reason": {
+          "id": 6,
+          "label": "Inserção de crédito",
+          "description": ""
+        }
+      },
+      "user": {
+        "id": "user-producao"
+      }
+    },
+    "payment_id": "a2db3a3b-0000-4000-8000-000000000001",
+    "redirect": "https://example.com/qrcode-ficticio.svg",
+    "message": "Sua compra está aguardando pagamento.",
+    "digitable": "00020101021226770014BR.GOV.BCB.PIX-FICTICIO6304ABCD"
+  }
+}
