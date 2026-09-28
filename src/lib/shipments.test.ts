@@ -8,6 +8,7 @@ import {
   addToCart,
   createPixForOrders,
   generateLabels,
+  labelFile,
   labelsStatus,
   payOrders,
   listAgencies,
@@ -385,5 +386,58 @@ describe("labels", () => {
       { id: A, status: "generated", generated: true, tracking: "ME2600000001BR" },
       { id: B, status: "released", generated: false, tracking: null },
     ]);
+  });
+});
+
+describe("labelFile", () => {
+  const ORDER = "a2db3844-f23e-4367-b6cf-02fb76413df5";
+  const FILE_URL = "https://me-0047-prod.s3.amazonaws.com/labels/etiqueta.pdf";
+  const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]); // "%PDF-"
+
+  function fakeServers(meReply: () => Response) {
+    const seen: { url: string; authorization: string | null }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        const headers = new Headers(init.headers);
+        seen.push({ url, authorization: headers.get("Authorization") });
+        if (url.startsWith("https://melhorenvio.com.br")) return meReply();
+        return new Response(pdf, { status: 200, headers: { "Content-Type": "application/pdf" } });
+      }),
+    );
+    return seen;
+  }
+
+  test("asks Melhor Envio for the PDF and downloads it without sending the token to the file host", async () => {
+    const seen = fakeServers(() => jsonResponse(200, FILE_URL));
+    const file = await labelFile(ORDER);
+
+    expect(new Uint8Array(file.bytes)).toEqual(pdf);
+    expect(file.contentType).toBe("application/pdf");
+    expect(seen[0]).toEqual({ url: `https://melhorenvio.com.br/api/v2/me/imprimir/pdf/${ORDER}`, authorization: "Bearer token" });
+    expect(seen[1]).toEqual({ url: FILE_URL, authorization: null });
+  });
+
+  test("also reads the URL when it comes wrapped in an object", async () => {
+    fakeServers(() => jsonResponse(200, { url: FILE_URL }));
+    expect((await labelFile(ORDER)).contentType).toBe("application/pdf");
+  });
+
+  test("a label not generated yet gives the API's reason", async () => {
+    fakeServers(() =>
+      jsonResponse(422, {
+        message: "E-PRT-0011: O envio precisa estar gerado para que a impressão seja processada.",
+        suggestion: "Gere o envio e aguarde a geração ser concluida para a impressão.",
+      }),
+    );
+    await expect(labelFile(ORDER)).rejects.toMatchObject({
+      status: 422,
+      message: "O envio precisa estar gerado para que a impressão seja processada. Gere o envio e aguarde a geração ser concluida para a impressão.",
+    });
+  });
+
+  test("refuses a file address that is not https", async () => {
+    fakeServers(() => jsonResponse(200, "http://inseguro.example/etiqueta.pdf"));
+    await expect(labelFile(ORDER)).rejects.toMatchObject({ status: 502 });
   });
 });

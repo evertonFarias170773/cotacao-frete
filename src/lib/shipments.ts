@@ -286,6 +286,44 @@ export async function labelsStatus(ids: string[]): Promise<LabelStatus[]> {
   }));
 }
 
+export type LabelFile = { bytes: ArrayBuffer; contentType: string };
+
+/** The file endpoint answers the storage URL as a bare JSON string or wrapped in an object. */
+function fileUrlFrom(body: unknown): string | null {
+  if (typeof body === "string") return body;
+  if (body && typeof body === "object") {
+    const found = Object.values(body as Record<string, unknown>).find(
+      (value) => typeof value === "string" && value.startsWith("http"),
+    );
+    return typeof found === "string" ? found : null;
+  }
+  return null;
+}
+
+/**
+ * Downloads the label PDF on the server (decision in Task 15): the public print link would expose
+ * the recipient's name, address and phone to anyone holding it. The token goes only to Melhor Envio,
+ * never to the storage host.
+ */
+export async function labelFile(orderId: string): Promise<LabelFile> {
+  const response = await meRequest("GET", `/api/v2/me/imprimir/pdf/${encodeURIComponent(orderId)}`, undefined, {
+    timeoutMessage: NO_ANSWER,
+  });
+  if (!isOk(response.status)) throw mapApiError(response.status, response.body);
+
+  const url = fileUrlFrom(response.body);
+  if (!url || !url.startsWith("https://")) throw new QuoteError(502, "O Melhor Envio não devolveu o arquivo da etiqueta.");
+
+  let file: Response;
+  try {
+    file = await fetch(url, { cache: "no-store" });
+  } catch {
+    throw new QuoteError(504, "Não foi possível baixar a etiqueta. Tente novamente.");
+  }
+  if (!file.ok) throw new QuoteError(502, "Não foi possível baixar a etiqueta. Tente novamente.");
+  return { bytes: await file.arrayBuffer(), contentType: file.headers.get("content-type") ?? "application/pdf" };
+}
+
 export type AgencyOption = { id: number; name: string; address: string; preferred: boolean };
 
 const agencySchema = z.looseObject({
