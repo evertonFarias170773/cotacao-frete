@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { quoteShipment } from "./melhorEnvio";
+import { meRequest, quoteShipment } from "./melhorEnvio";
 import { QuoteError } from "./errors";
 import type { QuoteRequest } from "./schemas";
 
@@ -150,5 +150,63 @@ describe("User-Agent normalization", () => {
     vi.stubEnv("MELHOR_ENVIO_USER_AGENT", "Minha Loja (ti@loja.com.br)");
     await quoteShipment(request);
     expect(sentUserAgent()).toBe("Minha Loja (ti@loja.com.br)");
+  });
+});
+
+describe("meRequest", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("MELHOR_ENVIO_TOKEN", "production-token");
+    vi.stubEnv("MELHOR_ENVIO_ENV", "production");
+    vi.stubEnv("MELHOR_ENVIO_USER_AGENT", "dev@example.com");
+    fetchMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  const sent = () => fetchMock.mock.calls[0] as [string, RequestInit];
+
+  test("sends any method with the auth headers and returns status and parsed body", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { balance: 12.5 }));
+    const result = await meRequest("GET", "/api/v2/me/balance");
+    const [url, init] = sent();
+    expect(url).toBe("https://melhorenvio.com.br/api/v2/me/balance");
+    expect(init.method).toBe("GET");
+    expect(init.body).toBeUndefined();
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer production-token");
+    expect(result).toEqual({ status: 200, body: { balance: 12.5 } });
+  });
+
+  test("serialises a JSON body", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    await meRequest("POST", "/api/v2/me/cart", { service: 1 });
+    expect(JSON.parse(sent()[1].body as string)).toEqual({ service: 1 });
+  });
+
+  test("an empty 204 body comes back as null", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    expect(await meRequest("POST", "/api/v2/me/shipment/checkout", { orders: ["x"] })).toEqual({ status: 204, body: null });
+  });
+
+  test("the sandbox uses its own token when one is configured", async () => {
+    vi.stubEnv("MELHOR_ENVIO_ENV", "sandbox");
+    vi.stubEnv("MELHOR_ENVIO_SANDBOX_TOKEN", "sandbox-token");
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, {}));
+    await meRequest("GET", "/api/v2/me/balance");
+    expect(sent()[0]).toBe("https://sandbox.melhorenvio.com.br/api/v2/me/balance");
+    expect((sent()[1].headers as Record<string, string>).Authorization).toBe("Bearer sandbox-token");
+  });
+
+  test("a network failure becomes a friendly error, with the caller's wording", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+    await expect(meRequest("GET", "/api/v2/me/balance", undefined, { timeoutMessage: "O Melhor Envio não respondeu." })).rejects.toMatchObject({
+      status: 504,
+      message: "O Melhor Envio não respondeu.",
+    });
   });
 });

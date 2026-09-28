@@ -31,7 +31,7 @@ const serviceSchema = z.looseObject({
   custom_delivery_range: range,
   packages: z.array(z.unknown()).nullish(),
   company: z
-    .looseObject({ name: z.string().nullish(), picture: z.string().nullish() })
+    .looseObject({ id: z.coerce.number().nullish(), name: z.string().nullish(), picture: z.string().nullish() })
     .nullish(),
   error: z.string().nullish(),
 });
@@ -86,6 +86,7 @@ export function normalizeQuoteResponse(raw: unknown): QuoteResult {
       price,
     };
     if (s.company?.picture) option.logoUrl = s.company.picture;
+    if (s.company?.id != null && Number.isFinite(s.company.id)) option.companyId = s.company.id;
     if (s.price !== undefined && s.price !== price) option.originalPrice = s.price;
     if (min !== undefined) option.deliveryMin = min;
     if (max !== undefined) option.deliveryMax = max;

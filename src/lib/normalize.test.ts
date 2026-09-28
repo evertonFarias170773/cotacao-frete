@@ -25,6 +25,7 @@ describe("normalizeQuoteResponse", () => {
       id: 1,
       service: "PAC",
       company: "Correios",
+      companyId: 1,
       logoUrl: "https://cdn/correios.png",
       price: 25.5,
       originalPrice: 30,

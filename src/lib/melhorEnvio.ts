@@ -26,33 +26,41 @@ function userAgentFrom(value: string | undefined): string {
 }
 
 function getConfig(): Config {
-  const token = process.env.MELHOR_ENVIO_TOKEN?.trim();
+  const sandbox = process.env.MELHOR_ENVIO_ENV?.trim() === "sandbox";
+  const token = (sandbox ? process.env.MELHOR_ENVIO_SANDBOX_TOKEN?.trim() : "") || process.env.MELHOR_ENVIO_TOKEN?.trim();
   if (!token) throw new QuoteError(500, "Token do Melhor Envio não configurado no servidor.");
-  const env = process.env.MELHOR_ENVIO_ENV?.trim();
   return {
     token,
-    baseUrl: env === "sandbox" ? BASE_URLS.sandbox : BASE_URLS.production,
+    baseUrl: sandbox ? BASE_URLS.sandbox : BASE_URLS.production,
     userAgent: userAgentFrom(process.env.MELHOR_ENVIO_USER_AGENT),
   };
 }
 
-async function post(
-  config: Config,
-  payload: unknown,
-  timeoutMs: number,
-): Promise<{ status: number; body: unknown }> {
+export type MeResponse = { status: number; body: unknown };
+
+/**
+ * Any call to the Melhor Envio API with the server's token. Never throws on HTTP errors:
+ * the caller decides what a status means. Throws QuoteError(504) on timeout or network failure.
+ */
+export async function meRequest(
+  method: "GET" | "POST" | "DELETE",
+  path: string,
+  payload?: unknown,
+  options: { timeoutMs?: number; timeoutMessage?: string } = {},
+): Promise<MeResponse> {
+  const config = getConfig();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   try {
-    const response = await fetch(`${config.baseUrl}${CALCULATE_PATH}`, {
-      method: "POST",
+    const response = await fetch(`${config.baseUrl}${path}`, {
+      method,
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.token}`,
         "User-Agent": config.userAgent,
       },
-      body: JSON.stringify(payload),
+      body: payload === undefined ? undefined : JSON.stringify(payload),
       signal: controller.signal,
       cache: "no-store",
     });
@@ -66,10 +74,14 @@ async function post(
     return { status: response.status, body };
   } catch {
     // Abort (timeout) or network failure: never surface internals to the caller.
-    throw new QuoteError(504, TIMEOUT_MESSAGE);
+    throw new QuoteError(504, options.timeoutMessage ?? TIMEOUT_MESSAGE);
   } finally {
     clearTimeout(timer);
   }
+}
+
+function post(payload: unknown, timeoutMs: number): Promise<MeResponse> {
+  return meRequest("POST", CALCULATE_PATH, payload, { timeoutMs });
 }
 
 /**
@@ -80,12 +92,11 @@ export async function quoteShipment(
   request: QuoteRequest,
   options: { timeoutMs?: number } = {},
 ): Promise<QuoteResult> {
-  const config = getConfig();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  let result = await post(config, buildVolumesPayload(request), timeoutMs);
+  let result = await post(buildVolumesPayload(request), timeoutMs);
   if (result.status === 422 && wantsProductsMode(result.body)) {
-    result = await post(config, buildProductsPayload(request), timeoutMs);
+    result = await post(buildProductsPayload(request), timeoutMs);
   }
   if (result.status < 200 || result.status >= 300) {
     throw mapApiError(result.status, result.body);

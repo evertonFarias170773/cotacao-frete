@@ -2,6 +2,8 @@ export type QuoteOption = {
   id: number;
   service: string;
   company: string;
+  /** Melhor Envio carrier id (1 Correios, 2 Jadlog, 9 Azul Cargo...). */
+  companyId?: number;
   logoUrl?: string;
   /** Price to display (custom_price, falling back to price). */
   price: number;
