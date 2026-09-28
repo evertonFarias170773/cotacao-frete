@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NF-e fictícia para testes: todos os nomes, documentos e endereços são inventados. -->
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+    <infNFe Id="NFe43260946867029000176550010000123451123456780" versao="4.00">
+      <ide>
+        <cUF>43</cUF>
+        <cNF>12345678</cNF>
+        <natOp>Venda de mercadoria</natOp>
+        <mod>55</mod>
+        <serie>1</serie>
+        <nNF>12345</nNF>
+        <dhEmi>2026-09-28T10:00:00-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <tpAmb>1</tpAmb>
+      </ide>
+      <emit>
+        <CNPJ>46867029000176</CNPJ>
+        <xNome>Empresa Ficticia LTDA</xNome>
+        <enderEmit>
+          <xLgr>Rua do Remetente</xLgr>
+          <nro>81</nro>
+          <xBairro>Medianeira</xBairro>
+          <xMun>Porto Alegre</xMun>
+          <UF>RS</UF>
+          <CEP>90660130</CEP>
+        </enderEmit>
+        <IE>1234567890</IE>
+      </emit>
+      <dest>
+        <CNPJ>11222333000181</CNPJ>
+        <xNome>Cliente Ficticio Comercio LTDA</xNome>
+        <enderDest>
+          <xLgr>Rua Anita Garibaldi</xLgr>
+          <nro>25</nro>
+          <xCpl>Sala 2</xCpl>
+          <xBairro>Se</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>Sao Paulo</xMun>
+          <UF>SP</UF>
+          <CEP>01018020</CEP>
+          <cPais>1058</cPais>
+          <xPais>Brasil</xPais>
+          <fone>1133334444</fone>
+        </enderDest>
+        <indIEDest>1</indIEDest>
+        <IE>111222333444</IE>
+        <email>compras@example.com</email>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>TRIBAND</cProd>
+          <xProd>Pulseira Tri Band</xProd>
+          <qCom>9.0000</qCom>
+          <vUnCom>135.0000000000</vUnCom>
+          <vProd>1215.00</vProd>
+        </prod>
+      </det>
+      <total>
+        <ICMSTot>
+          <vProd>1215.00</vProd>
+          <vNF>1215.00</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>0</modFrete>
+        <vol>
+          <qVol>1</qVol>
+          <esp>Caixa</esp>
+          <pesoL>9.450</pesoL>
+          <pesoB>9.450</pesoB>
+        </vol>
+      </transp>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>1</tpAmb>
+      <chNFe>43260946867029000176550010000123451123456780</chNFe>
+      <dhRecbto>2026-09-28T10:00:05-03:00</dhRecbto>
+      <nProt>143260000000001</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

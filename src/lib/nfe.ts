@@ -14,3 +14,9 @@ export function isValidNfeKey(value: string): boolean {
   const rest = sum % 11;
   return (rest < 2 ? 0 : 11 - rest) === Number(key[43]);
 }
+
+/** The key carries the issuer's CNPJ in positions 7-20; null when the key itself is invalid. */
+export function emitterDocumentFromKey(value: string): string | null {
+  if (!isValidNfeKey(value)) return null;
+  return value.replace(/\D/g, "").slice(6, 20);
+}
