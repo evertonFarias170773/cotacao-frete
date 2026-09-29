@@ -17,8 +17,8 @@ type Props = {
   companyId?: number;
   initial: RecipientInput;
   initialAgencyId?: number;
-  /** Invoice number when the fields came from an NF-e XML. */
-  prefilledFrom?: string;
+  /** Where the fields came from, e.g. "Dados preenchidos pela NF-e nº 12345." */
+  prefilledNote?: string;
   busy: boolean;
   error: string | null;
   onBack: () => void;
@@ -26,7 +26,7 @@ type Props = {
 };
 
 export function RecipientStep(props: Props) {
-  const { destinationCep, origin, companyId, initial, prefilledFrom, busy, error, onBack, onNext } = props;
+  const { destinationCep, origin, companyId, initial, prefilledNote, busy, error, onBack, onNext } = props;
   const {
     register,
     handleSubmit,
@@ -70,10 +70,10 @@ export function RecipientStep(props: Props) {
         back={{ label: "Voltar", onClick: onBack, disabled: busy }}
         next={{ label: "Revisar envio", type: "submit", busy, disabled: !agencyReady }}
       >
-        {prefilledFrom ? (
+        {prefilledNote ? (
           <p className="flex items-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-fg">
             <FileCheck2 className="h-4 w-4 shrink-0" aria-hidden />
-            Dados preenchidos pela NF-e nº {prefilledFrom}. Confira e complete o que faltar.
+            {prefilledNote} Confira e complete o que faltar.
           </p>
         ) : (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Quem recebe o envio.</p>

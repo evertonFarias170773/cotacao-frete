@@ -6,6 +6,7 @@ import { formatCep, formatCurrency } from "@/lib/format";
 import { compareNfeWithQuote } from "@/lib/nfeChecks";
 import { MAX_NFE_XML_BYTES, NfeXmlError, parseNfeXml, type NfeData } from "@/lib/nfeXml";
 import { contentSchema, recipientFromNfe, type RecipientInput } from "@/lib/recipient";
+import { compareNfeWithVibe, type LoadedNfe, type VibeOrder } from "@/lib/vibe";
 import {
   DECLARATION_INSURANCE_LIMIT,
   DEFAULT_DESCRIPTION,
@@ -29,6 +30,10 @@ type Props = {
   companyId?: number;
   declaredValue: number;
   initial: { source: DocumentSource; content: ContentDraft; nfe?: NfeSummary };
+  /** Vibe order on screen: the invoice is compared with it. */
+  vibe?: VibeOrder;
+  /** Offered when the invoice's CEP differs from the quote: redo the quote with it. */
+  onRequote?: (invoice: LoadedNfe) => void;
   onCancel: () => void;
   onNext: (result: DocumentResult) => void;
 };
@@ -45,7 +50,8 @@ type LoadedXml = { nfe: NfeData; xml: string; blocking: string | null; warnings:
 /** Azul Cargo refuses commercial shipments without the NF-e XML. */
 const AZUL_COMPANY_ID = 9;
 
-export function DocumentStep({ destinationCep, companyId, declaredValue, initial, onCancel, onNext }: Props) {
+export function DocumentStep(props: Props) {
+  const { destinationCep, companyId, declaredValue, initial, vibe, onRequote, onCancel, onNext } = props;
   const [source, setSource] = useState<DocumentSource>(initial.source);
   const [description, setDescription] = useState(
     initial.content.kind === "declaration" ? initial.content.description : DEFAULT_DESCRIPTION,
@@ -68,7 +74,10 @@ export function DocumentStep({ destinationCep, companyId, declaredValue, initial
     try {
       const xml = await file.text();
       const nfe = parseNfeXml(xml);
-      setLoaded({ nfe, xml, ...compareNfeWithQuote(nfe, { destinationCep, declaredValue }) });
+      const checks = compareNfeWithQuote(nfe, { destinationCep, declaredValue });
+      // With a different CEP the blocking message already says it; the other differences still matter.
+      const vibeWarnings = vibe && !checks.blocking ? compareNfeWithVibe(nfe, vibe) : [];
+      setLoaded({ nfe, xml, blocking: checks.blocking, warnings: [...checks.warnings, ...vibeWarnings] });
     } catch (err) {
       setFileError(err instanceof NfeXmlError ? err.message : "Não foi possível ler o arquivo.");
     }
@@ -172,6 +181,15 @@ export function DocumentStep({ destinationCep, companyId, declaredValue, initial
             <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
               {loaded.blocking}
             </p>
+          )}
+          {loaded?.blocking && onRequote && (
+            <button
+              type="button"
+              onClick={() => onRequote({ nfe: loaded.nfe, xml: loaded.xml })}
+              className="h-11 w-full rounded-xl border border-zinc-300 px-4 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
+              Refazer a cotação com a nota
+            </button>
           )}
           {loaded?.warnings.map((warning) => (
             <p key={warning} className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">

@@ -7,7 +7,9 @@ import type { QuoteRequest } from "@/lib/schemas";
 import type { QuoteOption } from "@/lib/types";
 import { LabelPanel } from "../payment/LabelPanel";
 import { PaymentPanel } from "../payment/PaymentPanel";
-import type { RecipientInput } from "@/lib/recipient";
+import { compareNfeWithQuote } from "@/lib/nfeChecks";
+import { recipientFromNfe, type RecipientInput } from "@/lib/recipient";
+import { compareNfeWithVibe, type LoadedNfe, type VibeSelection } from "@/lib/vibe";
 import type { AgencyChoice } from "./AgencyPicker";
 import { DocumentStep, type DocumentResult } from "./DocumentStep";
 import { RecipientStep } from "./RecipientStep";
@@ -26,15 +28,39 @@ const STEPS: { id: Step; label: string }[] = [
   { id: "label", label: "Etiqueta" },
 ];
 
-type Props = { option: QuoteOption; quote: QuoteRequest; onClose: () => void };
+type Props = {
+  option: QuoteOption;
+  quote: QuoteRequest;
+  /** Vibe order on the quote screen, with its invoice if one was attached there. */
+  vibe?: VibeSelection | null;
+  /** Closes the contract and redoes the quote with an invoice whose CEP differs. */
+  onRequoteWithInvoice?: (invoice: LoadedNfe) => void;
+  onClose: () => void;
+};
 
-export function ContractDialog({ option, quote, onClose }: Props) {
+/** Starts from the Vibe order: its invoice when attached (the invoice wins), else its recipient. */
+function initialDraft(vibe: VibeSelection | null, destinationCep: string, declaredValue: number): ContractDraft {
+  const invoice = vibe?.invoice;
+  if (vibe && invoice) {
+    const checks = compareNfeWithQuote(invoice.nfe, { destinationCep, declaredValue });
+    return {
+      source: "xml",
+      recipient: recipientFromNfe(invoice.nfe.recipient),
+      content: { kind: "invoice", key: invoice.nfe.key, xml: invoice.xml },
+      nfe: {
+        number: invoice.nfe.number,
+        totalValue: invoice.nfe.totalValue,
+        warnings: [...checks.warnings, ...compareNfeWithVibe(invoice.nfe, vibe.order)],
+      },
+    };
+  }
+  return { source: "xml", recipient: vibe?.order.recipient ?? EMPTY_RECIPIENT, content: { kind: "invoice", key: "" } };
+}
+
+export function ContractDialog({ option, quote, vibe = null, onRequoteWithInvoice, onClose }: Props) {
+  const declaredValue = quote.volumes.reduce((total, volume) => total + volume.insurance * volume.quantity, 0);
   const [step, setStep] = useState<Step>("document");
-  const [draft, setDraft] = useState<ContractDraft>({
-    source: "xml",
-    recipient: EMPTY_RECIPIENT,
-    content: { kind: "invoice", key: "" },
-  });
+  const [draft, setDraft] = useState<ContractDraft>(() => initialDraft(vibe, quote.destinationCep, declaredValue));
   // Changes whenever a new XML fills the recipient, so the form starts over with its data.
   const [recipientVersion, setRecipientVersion] = useState(0);
   const [cart, setCart] = useState<CartResult | null>(null);
@@ -43,8 +69,6 @@ export function ContractDialog({ option, quote, onClose }: Props) {
   // Once paid, or once a PIX exists for them, the orders must stay: the money is on its way.
   const [paid, setPaid] = useState(false);
   const [pixCreated, setPixCreated] = useState(false);
-
-  const declaredValue = quote.volumes.reduce((total, volume) => total + volume.insurance * volume.quantity, 0);
 
   /** Items left unpaid in the Melhor Envio cart are removed when the user backs out. */
   function discardCart() {
@@ -98,7 +122,14 @@ export function ContractDialog({ option, quote, onClose }: Props) {
     try {
       const result = await callApi<CartResult>("/api/shipments/cart", {
         method: "POST",
-        body: { quote, serviceId: option.id, recipient, content: next.content, agencyId: agency?.id },
+        body: {
+          quote,
+          serviceId: option.id,
+          recipient,
+          content: next.content,
+          agencyId: agency?.id,
+          vibeOrder: vibe?.order.id,
+        },
       });
       setCart(result);
       setStep("review");
@@ -152,6 +183,15 @@ export function ContractDialog({ option, quote, onClose }: Props) {
             companyId={option.companyId}
             declaredValue={declaredValue}
             initial={{ source: draft.source, content: draft.content, nfe: draft.nfe }}
+            vibe={vibe?.order}
+            onRequote={
+              vibe && onRequoteWithInvoice
+                ? (invoice) => {
+                    discardCart();
+                    onRequoteWithInvoice(invoice);
+                  }
+                : undefined
+            }
             onCancel={close}
             onNext={documentChosen}
           />
@@ -164,7 +204,13 @@ export function ContractDialog({ option, quote, onClose }: Props) {
             companyId={option.companyId}
             initial={draft.recipient}
             initialAgencyId={draft.agencyId}
-            prefilledFrom={draft.source === "xml" ? draft.nfe?.number : undefined}
+            prefilledNote={
+              draft.source === "xml" && draft.nfe
+                ? `Dados preenchidos pela NF-e nº ${draft.nfe.number}.`
+                : vibe
+                  ? `Dados preenchidos pelo pedido ${vibe.order.id} do Vibe.`
+                  : undefined
+            }
             busy={busy}
             error={error}
             onBack={() => {

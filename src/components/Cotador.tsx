@@ -427,6 +427,11 @@ export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
         <ContractDialog
           option={contracting}
           quote={quote.request}
+          vibe={vibe}
+          onRequoteWithInvoice={(invoice) => {
+            setContracting(null);
+            attachVibeInvoice(invoice);
+          }}
           onClose={() => setContracting(null)}
         />
       )}
