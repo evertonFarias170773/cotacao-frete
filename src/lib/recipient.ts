@@ -3,6 +3,7 @@ import type { Party } from "./cart";
 import { documentKind, normalizeDocument } from "./documents";
 import { onlyDigits } from "./format";
 import { isValidNfeKey } from "./nfe";
+import type { NfeRecipient } from "./nfeXml";
 import { quoteRequestSchema } from "./schemas";
 
 /** Recipient as typed in the contract screen. The CEP is not here: it is the quoted destination. */
@@ -54,6 +55,8 @@ export const contractRequestSchema = z.object({
   recipient: recipientSchema,
   content: contentSchema,
   agencyId: z.number().int().positive().optional(),
+  /** Vibe order the shipment came from; becomes a tag in the Melhor Envio panel. */
+  vibeOrder: z.number().int().positive().max(999_999_999).optional(),
 });
 
 export type ContractRequest = z.output<typeof contractRequestSchema>;
@@ -74,6 +77,22 @@ export function toRecipientParty(recipient: Recipient, postalCode: string): Part
   if (documentKind(recipient.document) === "cnpj") party.companyDocument = recipient.document;
   else party.document = recipient.document;
   return party;
+}
+
+/** The recipient form filled from an NF-e XML; the invoice always wins over other sources. */
+export function recipientFromNfe(recipient: NfeRecipient): RecipientInput {
+  return {
+    name: recipient.name,
+    document: recipient.document,
+    phone: recipient.phone,
+    email: recipient.email,
+    address: recipient.address,
+    number: recipient.number,
+    complement: recipient.complement,
+    district: recipient.district,
+    city: recipient.city,
+    stateAbbr: recipient.stateAbbr,
+  };
 }
 
 export const SAME_DOCUMENT_MESSAGE =

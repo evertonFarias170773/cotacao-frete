@@ -1,10 +1,13 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import type { Party } from "./cart";
+import { parseNfeXml } from "./nfeXml";
 import {
   SAME_DOCUMENT_MESSAGE,
   contentSchema,
   contractBlockReason,
   contractRequestSchema,
+  recipientFromNfe,
   recipientSchema,
   toRecipientParty,
 } from "./recipient";
@@ -149,5 +152,33 @@ describe("contractBlockReason (transfer between the company's own units)", () =>
   test("other carriers and other recipients are not blocked", () => {
     expect(contractBlockReason(1, sender, sameCompany)).toBeNull();
     expect(contractBlockReason(35, sender, otherPerson)).toBeNull();
+  });
+});
+
+describe("recipientFromNfe", () => {
+  test("fills every recipient field from the invoice", () => {
+    const nfe = parseNfeXml(readFileSync(new URL("./__fixtures__/nfe-ficticia.xml", import.meta.url), "utf8"));
+    expect(recipientFromNfe(nfe.recipient)).toEqual({
+      name: "Cliente Ficticio Comercio LTDA",
+      document: "11222333000181",
+      phone: "1133334444",
+      email: "compras@example.com",
+      address: "Rua Anita Garibaldi",
+      number: "25",
+      complement: "Sala 2",
+      district: "Se",
+      city: "Sao Paulo",
+      stateAbbr: "SP",
+    });
+  });
+});
+
+describe("contractRequestSchema vibeOrder", () => {
+  test.each([0, -1, 1.5, 1_000_000_000])("refuses %s as a Vibe order", (vibeOrder) => {
+    expect(contractRequestSchema.shape.vibeOrder.safeParse(vibeOrder).success).toBe(false);
+  });
+
+  test("is optional", () => {
+    expect(contractRequestSchema.shape.vibeOrder.safeParse(undefined).success).toBe(true);
   });
 });

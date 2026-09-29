@@ -72,6 +72,7 @@ export async function addToCart(contract: ContractRequest): Promise<CartResult> 
       content: contract.content,
       agencyId: contract.agencyId,
       tag: APP_TAG,
+      extraTags: contract.vibeOrder ? [`Vibe ${contract.vibeOrder}`] : [],
     });
   } catch (error) {
     if (error instanceof CartBuildError) throw new QuoteError(422, error.message);

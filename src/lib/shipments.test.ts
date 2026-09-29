@@ -87,6 +87,14 @@ describe("addToCart", () => {
     expect(sent.options.tags[0].tag).toBe(APP_TAG);
   });
 
+  test("an order from the Vibe is tagged with its number, keeping the app tag", async () => {
+    const { calls } = fakeMelhorEnvio([{ method: "POST", path: /\/cart$/, reply: () => jsonResponse(201, cartPac) }]);
+    const single = { ...contract.quote, volumes: [{ ...contract.quote.volumes[0], quantity: 1 }] };
+    await addToCart({ ...contract, quote: single, vibeOrder: 22773 });
+    const sent = calls[0].body as { options: { tags: { tag: string }[] } };
+    expect(sent.options.tags.map((t) => t.tag)).toEqual([APP_TAG, "Vibe 22773"]);
+  });
+
   test("when the second item fails, the first is removed and the API reason is reported", async () => {
     const { calls } = fakeMelhorEnvio([
       {

@@ -108,6 +108,14 @@ describe("buildCartItems", () => {
     expect(item.options.tags).toEqual([{ tag: "cotador-123", url: null }]);
   });
 
+  test("extra tags follow the app tag", () => {
+    const [item] = buildCartItems({ request, serviceId: 1, sender, recipient, content: declaration, tag: "cotador", extraTags: ["Vibe 22773"] });
+    expect(item.options.tags).toEqual([
+      { tag: "cotador", url: null },
+      { tag: "Vibe 22773", url: null },
+    ]);
+  });
+
   test("includes the agency only when one is given", () => {
     const [without] = buildCartItems({ request, serviceId: 1, sender, recipient, content: declaration, tag: "t" });
     expect("agency" in without).toBe(false);

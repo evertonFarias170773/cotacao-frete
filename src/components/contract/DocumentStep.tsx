@@ -5,7 +5,7 @@ import { useState } from "react";
 import { formatCep, formatCurrency } from "@/lib/format";
 import { compareNfeWithQuote } from "@/lib/nfeChecks";
 import { NfeXmlError, parseNfeXml, type NfeData } from "@/lib/nfeXml";
-import { contentSchema, type RecipientInput } from "@/lib/recipient";
+import { contentSchema, recipientFromNfe, type RecipientInput } from "@/lib/recipient";
 import {
   DECLARATION_INSURANCE_LIMIT,
   DEFAULT_DESCRIPTION,
@@ -85,18 +85,7 @@ export function DocumentStep({ destinationCep, companyId, declaredValue, initial
           source,
           content: { kind: "invoice", key: nfe.key, xml: loaded.xml },
           nfe: { number: nfe.number, totalValue: nfe.totalValue, warnings: loaded.warnings },
-          recipient: {
-            name: nfe.recipient.name,
-            document: nfe.recipient.document,
-            phone: nfe.recipient.phone,
-            email: nfe.recipient.email,
-            address: nfe.recipient.address,
-            number: nfe.recipient.number,
-            complement: nfe.recipient.complement,
-            district: nfe.recipient.district,
-            city: nfe.recipient.city,
-            stateAbbr: nfe.recipient.stateAbbr,
-          },
+          recipient: recipientFromNfe(nfe.recipient),
         });
       } else if (!loaded && previousXml) {
         onNext({ source, content: previousXml.content, nfe: previousXml.nfe });

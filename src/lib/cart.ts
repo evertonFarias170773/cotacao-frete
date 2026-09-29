@@ -79,6 +79,8 @@ export type BuildCartInput = {
   agencyId?: number;
   /** Our own reference, visible in the Melhor Envio panel. */
   tag: string;
+  /** More references for the Melhor Envio panel, after the app tag (e.g. "Vibe 22773"). */
+  extraTags?: string[];
 };
 
 export class CartBuildError extends Error {}
@@ -109,7 +111,7 @@ function toApiParty(party: Party, stateRegister: string | undefined): ApiParty {
 
 /** Turns an accepted quote into Melhor Envio cart items, splitting per volume where the carrier demands it. */
 export function buildCartItems(input: BuildCartInput): CartItemPayload[] {
-  const { request, serviceId, sender, recipient, content, agencyId, tag } = input;
+  const { request, serviceId, sender, recipient, content, agencyId, tag, extraTags = [] } = input;
   if (digits(recipient.postalCode) !== request.destinationCep) {
     throw new CartBuildError("O CEP do destinatário é diferente do CEP cotado. Faça uma nova cotação.");
   }
@@ -144,7 +146,7 @@ export function buildCartItems(input: BuildCartInput): CartItemPayload[] {
         reverse: false,
         non_commercial: !commercial,
         platform: "Cotador de Fretes",
-        tags: [{ tag, url: null }],
+        tags: [tag, ...extraTags].map((value) => ({ tag: value, url: null })),
       },
     };
     if (commercial) {
