@@ -223,19 +223,36 @@ const pixResponseSchema = z.looseObject({
   payment: z.looseObject({
     id: z.string(),
     link: z.string().nullish(),
-    response: z
-      .looseObject({
-        data_response: z
-          .looseObject({
-            transaction: z.looseObject({ max_days_to_keep_waiting_payment: z.string().nullish() }).nullish(),
-          })
-          .nullish(),
-      })
-      .nullish(),
+    // The gateway's own answer. In production it comes as a JSON *string* (Sept 2026), so it is
+    // accepted in any shape and read separately; only the expiry is taken from it.
+    response: z.unknown().optional(),
   }),
   redirect: z.string().nullish(),
   digitable: z.string().nullish(),
 });
+
+const gatewayResponseSchema = z.looseObject({
+  data_response: z
+    .looseObject({ transaction: z.looseObject({ max_days_to_keep_waiting_payment: z.string().nullish() }).nullish() })
+    .nullish(),
+  transaction: z.looseObject({ max_days_to_keep_waiting_payment: z.string().nullish() }).nullish(),
+});
+
+/** Expiry of the PIX from the gateway response, whether it came as text or as an object. */
+function pixExpiry(response: unknown): string | undefined {
+  let value = response;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return undefined;
+    }
+  }
+  const parsed = gatewayResponseSchema.safeParse(value);
+  if (!parsed.success) return undefined;
+  const transaction = parsed.data.data_response?.transaction ?? parsed.data.transaction;
+  return transaction?.max_days_to_keep_waiting_payment ?? undefined;
+}
 
 /**
  * Tops the wallet up by PIX with exactly what these orders are missing (decision D2).
@@ -265,7 +282,7 @@ export async function createPixForOrders(
   if (!parsed.success || !qrCodeUrl || !copyPaste) {
     throw new QuoteError(502, "O Melhor Envio não devolveu o QR Code do PIX. Tente novamente.");
   }
-  const expiresAt = parsed.data.payment.response?.data_response?.transaction?.max_days_to_keep_waiting_payment;
+  const expiresAt = pixExpiry(parsed.data.payment.response);
   return {
     paymentId: parsed.data.payment.id,
     amount,
