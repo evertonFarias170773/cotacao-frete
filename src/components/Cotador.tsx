@@ -67,7 +67,7 @@ function revealResults() {
   }
 }
 
-export function Cotador() {
+export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
   const form = useForm<QuoteFormInput, unknown, QuoteFormOutput>({
     resolver: zodResolver(quoteFormSchema),
     mode: "onChange",
