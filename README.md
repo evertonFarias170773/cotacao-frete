@@ -23,6 +23,8 @@ Variáveis de ambiente (lidas **só no servidor**, nunca chegam ao navegador):
 | `APP_PASSWORD` | Senha única da equipe, pedida na tela `/entrar`. |
 | `SESSION_SECRET` | Segredo que assina o cookie de sessão, com 32 caracteres ou mais. Sem ele o app nega todo acesso. |
 | `SENDERS_JSON` | Dados completos do remetente de cada origem, em JSON de uma linha. Fica fora do código porque o repositório é público. Formato em `.env.example`. |
+| `VIBE_API_URL` | Endereço completo da API de pedidos do Vibe, até `/pedidos`, sem barra no fim. Opcional. |
+| `VIBE_API_KEY` | Chave de acesso à API do Vibe. Sem ela e sem a URL, o quadro "Pedido do Vibe" não aparece. |
 
 O token precisa dos escopos de carrinho, compra, geração, impressão, cancelamento, saldo e envios, e não só `shipping-calculate`. A lista está no plano em `docs/superpowers/plans/`.
 
