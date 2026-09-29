@@ -12,10 +12,14 @@ export const VIBE_ORIGIN = "poa" as const;
 
 export const NOT_WEIGHED = "Esse pedido ainda não foi pesado no despacho.";
 export const NO_POSTAL_CODE = "O pedido no Vibe não tem um CEP de entrega válido.";
+export const INVOICE_WITHOUT_POSTAL_CODE = "A nota não tem um CEP de entrega válido.";
 
 /** The quote form holds at most 20 volume lines of at most 50 identical boxes each. */
 const MAX_LINES = 20;
 const MAX_PER_LINE = 50;
+const MAX_BOXES = MAX_LINES * MAX_PER_LINE;
+
+export const TOO_MANY_BOXES = `O pedido tem caixas demais para uma cotação (máximo de ${MAX_BOXES}).`;
 
 /**
  * Every order leaves in the same box: the Triband base, with the height growing with the weight.
@@ -125,6 +129,8 @@ export function boxesFromWeight(totalWeight: number | null, count: number | null
 
 /** The reduced view of an order that goes to the browser. */
 export function toVibeOrder(response: VibeResponse): VibeOrder {
+  // Checked before building the boxes: a typo in the Vibe must not become a huge array.
+  if (Math.trunc(response.volumes?.quantidade ?? 1) > MAX_BOXES) throw new QuoteError(422, TOO_MANY_BOXES);
   const perBox = response.volumes?.lista?.map((item) => item.peso_kg) ?? [];
   const boxes = boxesFromWeight(response.peso_aferido_kg, response.volumes?.quantidade ?? null, perBox);
   if (boxes.length === 0) throw new QuoteError(422, NOT_WEIGHED);
@@ -152,6 +158,11 @@ export function toVibeOrder(response: VibeResponse): VibeOrder {
     },
     boxes,
   };
+}
+
+/** The delivery CEP is optional in the NF-e layout; without it the invoice cannot set the quoted CEP. */
+export function hasDeliveryPostalCode(nfe: NfeData): boolean {
+  return /^\d{8}$/.test(nfe.recipient.postalCode);
 }
 
 /** Names compare without case, accents or repeated spaces ("CLIENTE FICTÍCIO" = "Cliente Ficticio"). */

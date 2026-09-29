@@ -5,7 +5,14 @@ import { useState } from "react";
 import { callApi } from "@/lib/apiClient";
 import { formatCep, formatKg, onlyDigits } from "@/lib/format";
 import { MAX_NFE_XML_BYTES, NfeXmlError, parseNfeXml } from "@/lib/nfeXml";
-import { compareNfeWithVibe, type LoadedNfe, type VibeOrder, type VibeSelection } from "@/lib/vibe";
+import {
+  INVOICE_WITHOUT_POSTAL_CODE,
+  compareNfeWithVibe,
+  hasDeliveryPostalCode,
+  type LoadedNfe,
+  type VibeOrder,
+  type VibeSelection,
+} from "@/lib/vibe";
 
 type Props = {
   selection: VibeSelection | null;
@@ -55,7 +62,13 @@ export function VibeOrderPanel({ selection, disabled, onLoad, onInvoice, onClear
     }
     try {
       const xml = await file.text();
-      onInvoice({ nfe: parseNfeXml(xml), xml });
+      const nfe = parseNfeXml(xml);
+      // The CEP field is read-only while an order is loaded: an invoice without one would lock the form.
+      if (!hasDeliveryPostalCode(nfe)) {
+        setFileError(INVOICE_WITHOUT_POSTAL_CODE);
+        return;
+      }
+      onInvoice({ nfe, xml });
     } catch (err) {
       setFileError(err instanceof NfeXmlError ? err.message : "Não foi possível ler o arquivo.");
     }

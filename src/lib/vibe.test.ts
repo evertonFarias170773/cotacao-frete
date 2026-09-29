@@ -5,8 +5,10 @@ import { parseNfeXml } from "./nfeXml";
 import {
   NO_POSTAL_CODE,
   NOT_WEIGHED,
+  TOO_MANY_BOXES,
   boxesFromWeight,
   compareNfeWithVibe,
+  hasDeliveryPostalCode,
   toVibeOrder,
   vibeResponseSchema,
 } from "./vibe";
@@ -155,6 +157,23 @@ describe("toVibeOrder", () => {
     expect(() => toVibeOrder(response((b) => (b.entrega.endereco.cep = "0101")))).toThrow(NO_POSTAL_CODE);
   });
 
+  test("an order with more boxes than any quote holds is refused before building them", () => {
+    let error: unknown;
+    try {
+      toVibeOrder(response((b) => (b.volumes.quantidade = 22773)));
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toBeInstanceOf(QuoteError);
+    expect((error as QuoteError).status).toBe(422);
+    expect((error as QuoteError).message).toBe(TOO_MANY_BOXES);
+  });
+
+  test("1000 boxes still fit the form", () => {
+    const order = toVibeOrder(response((b) => (b.volumes.quantidade = 1000)));
+    expect(order.boxes).toHaveLength(20);
+  });
+
   test("a CEP with a hyphen is accepted", () => {
     expect(toVibeOrder(response((b) => (b.entrega.endereco.cep = "01018-020"))).postalCode).toBe("01018020");
   });
@@ -185,5 +204,15 @@ describe("compareNfeWithVibe", () => {
   test("an order without a document does not warn about it", () => {
     const other = { ...order, recipient: { ...order.recipient, document: "" } };
     expect(compareNfeWithVibe(nfe, other)).toEqual([]);
+  });
+});
+
+describe("hasDeliveryPostalCode", () => {
+  test("an invoice with an 8-digit delivery CEP can replace the order's CEP", () => {
+    expect(hasDeliveryPostalCode(nfe)).toBe(true);
+  });
+
+  test("an invoice without a delivery CEP cannot (the CEP is optional in the NF-e layout)", () => {
+    expect(hasDeliveryPostalCode({ ...nfe, recipient: { ...nfe.recipient, postalCode: "" } })).toBe(false);
   });
 });

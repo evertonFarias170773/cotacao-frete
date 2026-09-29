@@ -6,7 +6,7 @@ import { formatCep, formatCurrency } from "@/lib/format";
 import { compareNfeWithQuote } from "@/lib/nfeChecks";
 import { MAX_NFE_XML_BYTES, NfeXmlError, parseNfeXml, type NfeData } from "@/lib/nfeXml";
 import { contentSchema, recipientFromNfe, type RecipientInput } from "@/lib/recipient";
-import { compareNfeWithVibe, type LoadedNfe, type VibeOrder } from "@/lib/vibe";
+import { compareNfeWithVibe, hasDeliveryPostalCode, type LoadedNfe, type VibeOrder } from "@/lib/vibe";
 import {
   DECLARATION_INSURANCE_LIMIT,
   DEFAULT_DESCRIPTION,
@@ -182,7 +182,7 @@ export function DocumentStep(props: Props) {
               {loaded.blocking}
             </p>
           )}
-          {loaded?.blocking && onRequote && (
+          {loaded?.blocking && onRequote && hasDeliveryPostalCode(loaded.nfe) && (
             <button
               type="button"
               onClick={() => onRequote({ nfe: loaded.nfe, xml: loaded.xml })}
