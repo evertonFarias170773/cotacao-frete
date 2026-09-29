@@ -79,6 +79,21 @@ describe("buildCartItems", () => {
     expect(item.from.state_register).toBe("1234567890");
   });
 
+  test("Azul Cargo receives the invoice XML as text (options.invoice.xml_content)", () => {
+    const xml = '<?xml version="1.0"?><nfeProc><NFe/></nfeProc>';
+    const content = { kind: "invoice", key: "1".repeat(43) + "2", xml } as const;
+    for (const azulService of [15, 16]) {
+      const [item] = buildCartItems({ request, serviceId: azulService, sender, recipient, content, agencyId: 5692, tag: "t" });
+      expect(item.options.invoice).toEqual({ key: "1".repeat(43) + "2", xml_content: xml });
+    }
+  });
+
+  test("other carriers get only the key, even when the XML was loaded", () => {
+    const content = { kind: "invoice", key: "1".repeat(43) + "2", xml: "<nfeProc/>" } as const;
+    const [item] = buildCartItems({ request, serviceId: 3, sender, recipient, content, tag: "t" });
+    expect(item.options.invoice).toEqual({ key: "1".repeat(43) + "2" });
+  });
+
   test("sends digits only for documents, phones and CEPs, and the right document field", () => {
     const [item] = buildCartItems({ request, serviceId: 1, sender, recipient, content: declaration, tag: "cotador" });
     expect(item.from).toMatchObject({ company_document: "46867029000176", phone: "5133334444", postal_code: "90660130", country_id: "BR" });

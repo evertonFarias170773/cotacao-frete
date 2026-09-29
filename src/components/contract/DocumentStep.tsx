@@ -27,6 +27,8 @@ export type DocumentResult = {
 
 type Props = {
   destinationCep: string;
+  /** Carrier of the chosen service, for carrier-specific hints. */
+  companyId?: number;
   declaredValue: number;
   initial: { source: DocumentSource; content: ContentDraft; nfe?: NfeSummary };
   onCancel: () => void;
@@ -40,9 +42,12 @@ const formatKey = (value: string) =>
     .slice(0, 44)
     .replace(/(\d{4})(?=\d)/g, "$1 ");
 
-type LoadedXml = { nfe: NfeData; blocking: string | null; warnings: string[] };
+type LoadedXml = { nfe: NfeData; xml: string; blocking: string | null; warnings: string[] };
 
-export function DocumentStep({ destinationCep, declaredValue, initial, onCancel, onNext }: Props) {
+/** Azul Cargo refuses commercial shipments without the NF-e XML. */
+const AZUL_COMPANY_ID = 9;
+
+export function DocumentStep({ destinationCep, companyId, declaredValue, initial, onCancel, onNext }: Props) {
   const [source, setSource] = useState<DocumentSource>(initial.source);
   const [description, setDescription] = useState(
     initial.content.kind === "declaration" ? initial.content.description : DEFAULT_DESCRIPTION,
@@ -63,8 +68,9 @@ export function DocumentStep({ destinationCep, declaredValue, initial, onCancel,
       return;
     }
     try {
-      const nfe = parseNfeXml(await file.text());
-      setLoaded({ nfe, ...compareNfeWithQuote(nfe, { destinationCep, declaredValue }) });
+      const xml = await file.text();
+      const nfe = parseNfeXml(xml);
+      setLoaded({ nfe, xml, ...compareNfeWithQuote(nfe, { destinationCep, declaredValue }) });
     } catch (err) {
       setFileError(err instanceof NfeXmlError ? err.message : "Não foi possível ler o arquivo.");
     }
@@ -77,7 +83,7 @@ export function DocumentStep({ destinationCep, declaredValue, initial, onCancel,
         const { nfe } = loaded;
         onNext({
           source,
-          content: { kind: "invoice", key: nfe.key },
+          content: { kind: "invoice", key: nfe.key, xml: loaded.xml },
           nfe: { number: nfe.number, totalValue: nfe.totalValue, warnings: loaded.warnings },
           recipient: {
             name: nfe.recipient.name,
@@ -187,6 +193,12 @@ export function DocumentStep({ destinationCep, declaredValue, initial, onCancel,
           ))}
           <p className="text-xs text-zinc-500 dark:text-zinc-400">O arquivo é lido neste aparelho e não é enviado a nenhum servidor.</p>
         </div>
+      )}
+
+      {source === "key" && companyId === AZUL_COMPANY_ID && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          A Azul Cargo exige o XML da nota fiscal. Use a opção &ldquo;Nota fiscal (XML)&rdquo;.
+        </p>
       )}
 
       {source === "key" && (

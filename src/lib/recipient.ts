@@ -39,6 +39,11 @@ export const contentSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("invoice"),
     key: z.string().refine(isValidNfeKey, { error: "Chave da NF-e inválida." }),
+    /** Text of the NF-e XML when it came from the file; Azul Cargo requires it. */
+    xml: z
+      .string()
+      .max(2 * 1024 * 1024, { error: "XML grande demais para uma NF-e." })
+      .optional(),
   }),
 ]);
 

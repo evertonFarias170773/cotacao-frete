@@ -94,6 +94,18 @@ describe("contentSchema", () => {
       "Chave da NF-e inválida.",
     );
   });
+
+  test("an invoice keeps the XML text when it came from the file", () => {
+    const parsed = contentSchema.parse({ kind: "invoice", key: MODEL_55_KEY, xml: "<nfeProc/>" });
+    expect(parsed).toEqual({ kind: "invoice", key: MODEL_55_KEY, xml: "<nfeProc/>" });
+  });
+
+  test("refuses an XML larger than any real NF-e", () => {
+    const huge = "<a>" + "x".repeat(2 * 1024 * 1024) + "</a>";
+    expect(issueFor(contentSchema.safeParse({ kind: "invoice", key: MODEL_55_KEY, xml: huge }), "xml")).toBe(
+      "XML grande demais para uma NF-e.",
+    );
+  });
 });
 
 describe("contractRequestSchema", () => {

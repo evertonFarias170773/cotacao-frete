@@ -4,6 +4,12 @@ import type { QuoteRequest } from "./schemas";
 /** Services that reject more than one volume per cart item (account service list, Sept 2026). */
 export const SINGLE_VOLUME_SERVICES: ReadonlySet<number> = new Set([1, 2, 17, 31, 32, 33, 34]);
 
+/**
+ * Azul Cargo (services 15 and 16) refuses commercial shipments without the NF-e XML, sent as
+ * plain text in options.invoice.xml_content (verified against production, Sept 2026).
+ */
+export const XML_CONTENT_SERVICES: ReadonlySet<number> = new Set([15, 16]);
+
 export type Party = {
   name: string;
   phone: string;
@@ -25,7 +31,7 @@ export type Party = {
 
 export type ShipmentContent =
   | { kind: "declaration"; description: string }
-  | { kind: "invoice"; key: string };
+  | { kind: "invoice"; key: string; xml?: string };
 
 type ApiParty = {
   name: string;
@@ -59,7 +65,7 @@ export type CartItemPayload = {
     reverse: false;
     non_commercial: boolean;
     platform: string;
-    invoice?: { key: string };
+    invoice?: { key: string; xml_content?: string };
     tags: { tag: string; url: null }[];
   };
 };
@@ -141,7 +147,10 @@ export function buildCartItems(input: BuildCartInput): CartItemPayload[] {
         tags: [{ tag, url: null }],
       },
     };
-    if (commercial) item.options.invoice = { key: digits(content.key) };
+    if (commercial) {
+      item.options.invoice = { key: digits(content.key) };
+      if (content.xml && XML_CONTENT_SERVICES.has(serviceId)) item.options.invoice.xml_content = content.xml;
+    }
     if (agencyId !== undefined) item.agency = agencyId;
     return item;
   });

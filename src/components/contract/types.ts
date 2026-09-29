@@ -1,6 +1,8 @@
 import type { RecipientInput } from "@/lib/recipient";
 
-export type ContentDraft = { kind: "declaration"; description: string } | { kind: "invoice"; key: string };
+export type ContentDraft =
+  | { kind: "declaration"; description: string }
+  | { kind: "invoice"; key: string; xml?: string };
 
 /** How the user documents the shipment in the first step. */
 export type DocumentSource = "xml" | "key" | "declaration";

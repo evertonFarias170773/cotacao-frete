@@ -149,6 +149,7 @@ export function ContractDialog({ option, quote, onClose }: Props) {
         {step === "document" && (
           <DocumentStep
             destinationCep={quote.destinationCep}
+            companyId={option.companyId}
             declaredValue={declaredValue}
             initial={{ source: draft.source, content: draft.content, nfe: draft.nfe }}
             onCancel={close}
