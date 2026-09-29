@@ -1,0 +1,49 @@
+{
+  "id_int": 22773,
+  "pagador": {
+    "nome": "PAGADOR FICTICIO LTDA",
+    "documento": "00000000000100",
+    "email": "financeiro@example.com",
+    "telefone": "51999990000",
+    "endereco": {
+      "cep": "96800000",
+      "logradouro": "Rua Exemplo",
+      "numero": "100",
+      "complemento": "Sala 2",
+      "bairro": "Centro",
+      "cidade": "Cidade Exemplo",
+      "uf": "RS"
+    }
+  },
+  "entrega": {
+    "destinatario": {
+      "nome": "CLIENTE FICTÍCIO COMÉRCIO LTDA",
+      "documento": "11222333000181",
+      "email": "compras@example.com",
+      "telefone": null
+    },
+    "recebedor": { "nome": "Maria Exemplo", "cpf": "12345678909" },
+    "endereco": {
+      "cep": "01018020",
+      "logradouro": "Rua Anita Garibaldi",
+      "numero": "25",
+      "complemento": null,
+      "bairro": "Sé",
+      "cidade": "São Paulo",
+      "uf": "sp"
+    }
+  },
+  "valor_total": 345,
+  "envio": {
+    "modalidade": "FOB",
+    "servico": "MELHOR ENVIO",
+    "transportadora": { "id": 70010, "nome": "TRANSPORTADORA FICTICIA" },
+    "valor_frete": 0
+  },
+  "peso_aferido_kg": 4.95,
+  "volumes": {
+    "quantidade": 1,
+    "tipo": "Caixa",
+    "lista": [{ "numero": 1, "peso_kg": null, "altura_cm": null, "largura_cm": null, "comprimento_cm": null }]
+  }
+}
