@@ -9,6 +9,9 @@ import { isValidNfeKey } from "./nfe";
  */
 export class NfeXmlError extends Error {}
 
+/** No real NF-e XML comes close to this; bigger files are refused before reading. */
+export const MAX_NFE_XML_BYTES = 2 * 1024 * 1024;
+
 export type NfeRecipient = {
   name: string;
   document: string;

@@ -8,7 +8,8 @@ import { lookupCep, type CepInfo } from "@/lib/viacep";
 
 type Lookup = { cep: string; info: CepInfo | null };
 
-export function DestinationInput() {
+/** `readOnly` while a Vibe order is on screen: the CEP comes from the order or its invoice. */
+export function DestinationInput({ readOnly = false }: { readOnly?: boolean }) {
   const { control } = useFormContext<QuoteFormInput>();
   const {
     field: { ref, name, value, onChange, onBlur },
@@ -45,12 +46,13 @@ export function DestinationInput() {
         autoComplete="postal-code"
         placeholder="00000-000"
         maxLength={9}
+        readOnly={readOnly}
         value={value ?? ""}
         onChange={(event) => onChange(formatCep(event.target.value))}
         onBlur={onBlur}
         aria-invalid={showError}
         aria-describedby="destinationCep-hint"
-        className={`field text-lg tracking-wide ${showError ? "field-error" : ""}`}
+        className={`field text-lg tracking-wide ${showError ? "field-error" : ""} ${readOnly ? "bg-zinc-100 dark:bg-zinc-800" : ""}`}
       />
       <p id="destinationCep-hint" className="mt-1.5 min-h-5 text-sm" aria-live="polite">
         {showError ? (

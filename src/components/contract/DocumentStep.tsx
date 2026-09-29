@@ -4,7 +4,7 @@ import { FileCode2, FileText, Receipt, Upload } from "lucide-react";
 import { useState } from "react";
 import { formatCep, formatCurrency } from "@/lib/format";
 import { compareNfeWithQuote } from "@/lib/nfeChecks";
-import { NfeXmlError, parseNfeXml, type NfeData } from "@/lib/nfeXml";
+import { MAX_NFE_XML_BYTES, NfeXmlError, parseNfeXml, type NfeData } from "@/lib/nfeXml";
 import { contentSchema, recipientFromNfe, type RecipientInput } from "@/lib/recipient";
 import {
   DECLARATION_INSURANCE_LIMIT,
@@ -14,8 +14,6 @@ import {
   type NfeSummary,
 } from "./types";
 import { Field, StepShell } from "./StepShell";
-
-const MAX_XML_BYTES = 2 * 1024 * 1024;
 
 export type DocumentResult = {
   source: DocumentSource;
@@ -63,7 +61,7 @@ export function DocumentStep({ destinationCep, companyId, declaredValue, initial
     setFileError(null);
     setLoaded(null);
     if (!file) return;
-    if (file.size > MAX_XML_BYTES) {
+    if (file.size > MAX_NFE_XML_BYTES) {
       setFileError("Arquivo grande demais para um XML de NF-e.");
       return;
     }

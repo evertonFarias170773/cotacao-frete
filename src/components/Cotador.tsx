@@ -12,7 +12,6 @@ import {
 import { useHydrated } from "@/hooks/useHydrated";
 import { useOnline } from "@/hooks/useOnline";
 import { formatCep } from "@/lib/format";
-import type { PlannedVolume } from "@/lib/presets";
 import { requestQuote } from "@/lib/quoteClient";
 import {
   quoteFormSchema,
@@ -31,6 +30,13 @@ import {
   type HistoryEntry,
 } from "@/lib/storage";
 import type { QuoteOption, QuoteResult } from "@/lib/types";
+import {
+  VIBE_ORIGIN,
+  type BoxPlan,
+  type LoadedNfe,
+  type VibeOrder,
+  type VibeSelection,
+} from "@/lib/vibe";
 import { AppHeader } from "./AppHeader";
 import { ContractDialog } from "./contract/ContractDialog";
 import { PendingPaymentBanner } from "./payment/PendingPaymentBanner";
@@ -42,6 +48,7 @@ import { QuoteButton } from "./QuoteButton";
 import { ResultsList, type QuoteStatus } from "./ResultsList";
 import { VolumeCard } from "./VolumeCard";
 import { VolumesSummary } from "./VolumesSummary";
+import { VibeOrderPanel } from "./vibe/VibeOrderPanel";
 
 const RESULTS_ID = "resultados";
 /** Espera o usuário parar de digitar antes de refazer a cotação sozinho. */
@@ -57,6 +64,15 @@ const emptyVolume = (): VolumeFormInput => ({
 });
 
 const toFormText = (value: number) => String(value).replace(".", ",");
+
+const toVolumeInput = (volume: BoxPlan): VolumeFormInput => ({
+  height: toFormText(volume.height),
+  width: toFormText(volume.width),
+  length: toFormText(volume.length),
+  weight: toFormText(volume.weight),
+  insurance: toFormText(volume.insurance),
+  quantity: String(volume.quantity),
+});
 
 /** On small screens the results sit below the form; bring them into view after quoting. */
 function revealResults() {
@@ -99,6 +115,10 @@ export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
   } | null>(null);
   // The option being contracted; only ever one of the options of the quote on screen.
   const [contracting, setContracting] = useState<QuoteOption | null>(null);
+  // The Vibe order on screen (and its invoice). While set, origin and CEP come from it.
+  const [vibe, setVibe] = useState<VibeSelection | null>(null);
+  // Read inside submit, which may run in the same tick the order was loaded.
+  const vibeActive = useRef(false);
   const [failure, setFailure] = useState<{
     signature: string;
     message: string;
@@ -132,7 +152,6 @@ export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
   const submit = handleSubmit(
     async (data) => {
       const quoted = requestSignature(data);
-      saveLastOrigin(data.originId);
       try {
         const fresh = await requestQuote(data);
         setFailure(null);
@@ -157,6 +176,9 @@ export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
 
   /** Single entry point for every quote, so only one request runs at a time. */
   function startQuote({ reveal = true } = {}) {
+    // A Vibe order always leaves from Porto Alegre; that must not become the remembered origin.
+    const origin = getValues("originId");
+    if (origin && !vibeActive.current) saveLastOrigin(origin);
     setInFlight(true);
     void submit().then(() => {
       // An automatic recalculation must not yank the user away from the field being edited.
@@ -180,9 +202,38 @@ export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
     return () => clearTimeout(timer);
   }, [recalculating, signature]);
 
-  function newQuote() {
+  function leaveVibe() {
+    const wasActive = vibeActive.current;
+    vibeActive.current = false;
+    setVibe(null);
+    return wasActive;
+  }
+
+  function loadVibeOrder(order: VibeOrder) {
+    vibeActive.current = true;
+    setVibe({ order, invoice: null });
     reset({
-      originId: getValues("originId"),
+      originId: VIBE_ORIGIN,
+      destinationCep: formatCep(order.postalCode),
+      volumes: order.boxes.map(toVolumeInput),
+      options: getValues("options"),
+    });
+    startQuote();
+  }
+
+  /** The invoice wins: its CEP replaces the order's, and the quote recalculates by itself. */
+  function attachVibeInvoice(invoice: LoadedNfe) {
+    setVibe((current) => (current ? { ...current, invoice } : current));
+    setValue("destinationCep", formatCep(invoice.nfe.recipient.postalCode), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  }
+
+  function newQuote() {
+    const lastOrigin = leaveVibe() ? loadLastOrigin() : null;
+    reset({
+      originId: lastOrigin ?? getValues("originId"),
       destinationCep: "",
       volumes: [emptyVolume()],
       options: { receipt: false, own_hand: false },
@@ -192,6 +243,7 @@ export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
   }
 
   function repeat(entry: HistoryEntry) {
+    leaveVibe();
     reset({
       originId: entry.originId,
       destinationCep: formatCep(entry.destinationCep),
@@ -213,17 +265,8 @@ export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
   }
 
   /** Replaces the volume list with the packages a product preset generated. */
-  function applyPreset(plan: PlannedVolume[]) {
-    volumes.replace(
-      plan.map((volume) => ({
-        height: toFormText(volume.height),
-        width: toFormText(volume.width),
-        length: toFormText(volume.length),
-        weight: toFormText(volume.weight),
-        insurance: toFormText(volume.insurance),
-        quantity: String(volume.quantity),
-      })),
-    );
+  function applyPreset(plan: BoxPlan[]) {
+    volumes.replace(plan.map(toVolumeInput));
     void trigger("volumes");
   }
 
@@ -254,14 +297,24 @@ export function Cotador({ vibeEnabled = false }: { vibeEnabled?: boolean }) {
             </div>
           </header>
 
+          {vibeEnabled && (
+            <VibeOrderPanel
+              selection={vibe}
+              disabled={loading}
+              onLoad={loadVibeOrder}
+              onInvoice={attachVibeInvoice}
+              onClear={newQuote}
+            />
+          )}
+
           <section>
             <SectionTitle step={1}>De onde sai?</SectionTitle>
-            <OriginSelector />
+            <OriginSelector locked={vibe !== null} />
           </section>
 
           <section>
             <SectionTitle step={2}>Para onde vai?</SectionTitle>
-            <DestinationInput />
+            <DestinationInput readOnly={vibe !== null} />
           </section>
 
           <section>
